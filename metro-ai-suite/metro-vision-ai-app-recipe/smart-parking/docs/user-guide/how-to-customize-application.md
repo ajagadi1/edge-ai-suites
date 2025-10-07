@@ -67,7 +67,6 @@ Pipelines like `object_tracking_1`, `object_tracking_2`, `object_tracking_3`, `o
 Each pipeline is designed to be user-friendly and customizable:
 
 *   **Detection Properties:** Configurable parameters let you adjust the model settings without writing code. Example: The "detection-properties" element defines how the object detection module should behave.
-*   **Detection Device:** The "detection-device" parameter determines which hardware (e.g., CPU) to use. It uses an environment variable (`{env[DETECTION_DEVICE]}`) to make it flexible across different setups.
 
 #### Messaging Interface (MQTT)
 
