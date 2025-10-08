@@ -29,11 +29,18 @@ pip install --pre --upgrade ipex-llm[xpu_2.6] --extra-index-url https://download
 The default setup uses Whisper for transcription and OpenVINO Qwen models for summarization. You can customize these in the configuration file.
 
 ```bash
- ASR (Speech Recognition)
-YAMLasr:  provider: openvino            # Options: openvino, openai, funasr  name: whisper-tiny            # whisper-small, paraformer-zh, etc.  device: CPU                   # Whisper runs on CPU  temperature: 0.0Show more lines
+asr:
+  provider: openvino            # Supported: openvino, openai, funasr
+  name: whisper-tiny          # Options: whisper-tiny, whisper-small, paraformer-zh etc.
+  device: CPU                 # Whisper currently supports only CPU
+  temperature: 0.0
 
- Summarizer (LLM)
-YAMLsummarizer:  provider: openvino            # Options: openvino or ipex  name: Qwen/Qwen2-7B-Instruct  # Other options: Qwen1.5-7B-Chat, Qwen2.5-7B-Instruct  device: GPU                   # GPU recommended for performance  weight_format: int8           # Options: fp16, fp32, int4, int8  max_new_tokens: 1024          # Summary lengthShow more lines
+summarizer:
+  provider: openvino          # Options: openvino or ipex
+  name: Qwen/Qwen2-7B-Instruct # Examples: Qwen/Qwen1.5-7B-Chat, Qwen/Qwen2-7B-Instruct, Qwen/Qwen2.5-7B-Instruct
+  device: GPU                 # Options: GPU or CPU
+  weight_format: int8         # Supported: fp16, fp32, int4, int8
+  max_new_tokens: 1024        # Maximum tokens to generate in summaries
 ```
 
 💡 Tips:
