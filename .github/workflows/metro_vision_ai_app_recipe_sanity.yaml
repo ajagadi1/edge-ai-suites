@@ -62,9 +62,12 @@ jobs:
       run: | 
        sudo apt-get update
        sudo apt install -y python3-nose libxml2-utils vlc
-       pip install --upgrade pip --force-reinstall
-       pip install robotframework
-       pip install --force-reinstall  selenium
+       pip3 install --upgrade pip --force-reinstall
+       echo "upgrading setuptools"
+       python3 -m pip install --upgrade pip setuptools
+       echo "installing selenium"
+       pip3 install robotframework
+       pip3 install --force-reinstall  selenium
        python3 -c "from selenium import webdriver; print('OK')"
        cd edge-ai-suites-repo/metro-ai-suite/metro-vision-ai-app-recipe/test-suite/robot_files
        robot test.robot 
