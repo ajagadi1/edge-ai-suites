@@ -38,13 +38,13 @@ For prerequisites and system requirements, see [prerequisites.md](./prerequisite
 
 In this section, we describe how to run Intel® Metro AI Suite Sensor Fusion for Traffic Management application.
 
-Intel® Metro AI Suite Sensor Fusion for Traffic Management application can support different pipeline using topology JSON files to describe the pipeline topology. The defined pipeline topology can be found at [Resources Summary](#resources-summary)
+Intel® Metro AI Suite Sensor Fusion for Traffic Management application can support different pipeline using topology JSON files to describe the pipeline topology. The defined pipeline topology can be found at [Resources](#resources)
 
 There are two steps required for running the sensor fusion application:
-- Start AI Inference service, more details can be found at [Start Service](#start-service)
-- Run the application entry program, more details can be found at [Run Entry Program](#run-entry-program)
+- Start AI Inference service, more details can be found at [Service Start ](#service-start)
+- Run the application entry program, more details can be found at [Entry Program](#entry-program)
 
-Besides, you can test each component (without display) following the guides at [1C1R Unit Tests](#1c+1r-unit-tests), [4C4R Unit Tests](#434-4c+4r-unit-tests), [2C1R Unit Tests](#2c+1r-unit-tests), [16C4R Unit Tests](#16c+4r-unit-tests)
+Besides, you can test each component (without display) following the guides at [1C+1R Unit Tests](#1c+1r-unit-tests), [4C+4R Unit Tests](#4c+4r-unit-tests), [2C+1R Unit Tests](#2c+1r-unit-tests), [16C+4R Unit Tests](#16c+4r-unit-tests)
 
 
 ### Resources 
@@ -392,7 +392,7 @@ First, set the offline radar CSV file path in both localFusionPipeline.json `Fil
   "Configure String": "......;RadarDataFilePath=(STRING)/opt/radarResults.csv"
 },
 ```
-The method for generating offline radar files is described in [5.3.2.7 Save radar pipeline tracking results](#5327-save-radar-pipeline-tracking-results). Or you can use a pre-prepared data with the command below:
+The method for generating offline radar files is described in [Save radar pipeline tracking results](#save-radar-pipeline-tracking-results). Or you can use a pre-prepared data with the command below:
 ```bash
 sudo cp $PROJ_DIR/ai_inference/deployment/datasets/radarResults.csv /opt
 ```
@@ -612,7 +612,7 @@ First, set the offline radar CSV file path in both localFusionPipeline.json `Fil
 },
 ```
 
-The method for generating offline radar files is described in [5.3.2.7 Save radar pipeline tracking results](#5327-save-radar-pipeline-tracking-results). Or you can use a pre-prepared data with the command below:
+The method for generating offline radar files is described in [Save radar pipeline tracking results](#save-radar-pipeline-tracking-results). Or you can use a pre-prepared data with the command below:
 
 ```bash
 sudo cp $PROJ_DIR/ai_inference/deployment/datasets/radarResults.csv /opt
@@ -983,4 +983,5 @@ Some of the code is referenced from the following projects:
 - [IGT GPU Tools](https://gitlab.freedesktop.org/drm/igt-gpu-tools) (MIT License)
 - [Intel DL Streamer](https://github.com/dlstreamer/dlstreamer) (MIT License)
 - [Open Model Zoo](https://github.com/openvinotoolkit/open_model_zoo) (Apache-2.0 License)
+
 
