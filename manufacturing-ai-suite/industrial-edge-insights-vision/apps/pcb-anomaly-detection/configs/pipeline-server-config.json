@@ -117,6 +117,24 @@
                     }
                 },
                 "auto_start": false
+            },
+            {
+                "name": "pcb_anomaly_detection_benchmarking",
+                "source": "gstreamer",
+                "queue_maxsize": 50,
+                "pipeline": "multifilesrc location=/home/pipeline-server/resources/videos/anomalib_pcb_test_looped.avi loop=true ! parsebin ! vah264dec ! vapostproc ! video/x-raw(memory:VAMemory) ! gvaclassify name=classification ! queue ! gvawatermark ! gvafpscounter ! appsink sync=false async=false",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "classification-properties": {
+                            "element": {
+                                "name": "classification",
+                                "format": "element-properties"
+                            }
+                        }
+                    }
+                },
+                "auto_start": false
             }
         ]
     }
