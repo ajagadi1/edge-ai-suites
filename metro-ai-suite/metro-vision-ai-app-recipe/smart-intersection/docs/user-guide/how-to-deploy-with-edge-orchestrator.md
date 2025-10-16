@@ -12,13 +12,13 @@ Edge Orchestrator, part of Intel’s Edge Software, simplifies edge application 
 
 * **Flexible Configuration**: From organizing your physical infrastructure to managing the permutations of executing applications in a variety of runtime environments, Edge Orchestrator gives you the flexibility to define the policies, criteria, and hierarchies that make the most sense for your specific business needs.
 
-To deploy the **Smart Intersection** Sample Application with the Edge Orchestrator, follow the steps described in this document.
+To deploy the **Smart Intersection** Sample Application with the Edge Orchestrator, follow the steps in this document.
 
-## Procedure to Deploy with Edge Orchestrator
+## Deploy with Edge Orchestrator
 
 ### Prerequisites
 
-1. Access to the web interface of the Edge Orchestrator with one or more [Edge Nodes Onboarded](<https://docs.openedgeplatform.intel.com/edge-manage-docs/main/user_guide/set_up_edge_infra/edge_node_onboard.html>) to the Edge Orchestrator.
+1. Access to the web interface of the Edge Orchestrator with one or more [edge nodes onboarded](<https://docs.openedgeplatform.intel.com/edge-manage-docs/main/user_guide/set_up_edge_infra/edge_node_onboard.html>) to the Edge Orchestrator.
 
 1. Clusters with a [privilege template](<https://docs.openedgeplatform.intel.com/edge-manage-docs/main/user_guide/additional_howtos/set_up_a_cluster_template.html>) have been created on the needed Edge Nodes following the procedures described in [Create Cluster](<https://docs.openedgeplatform.intel.com/edge-manage-docs/main/user_guide/set_up_edge_infra/create_clusters.html#create-cluster>).
 
@@ -31,7 +31,7 @@ To deploy the **Smart Intersection** Sample Application with the Edge Orchestrat
     cd metro-ai-suite/metro-vision-ai-app-recipe/smart-intersection
     ```
 
-1. From the web browser, open the URL of the Edge Orchestrator and import the Deployment Package present in the folder **deployment-package** following the steps described in [Import Deployment Package](<https://docs.openedgeplatform.intel.com/edge-manage-docs/main/user_guide/package_software/import_deployment.html#import-deployment-package>).
+1. From the web browser, open the URL of the Edge Orchestrator and import the Deployment Package in the folder **deployment-package** following the steps described in [Import Deployment Package](<https://docs.openedgeplatform.intel.com/edge-manage-docs/main/user_guide/package_software/import_deployment.html#import-deployment-package>).
 
 1. After you have imported the deployment package into Edge Orchestrator, you can see it in the list of deployment packages:
 
@@ -55,17 +55,17 @@ To set up a deployment:
 
 1. On the Select Deployment Type page, select the type of deployment, and click **Next**:
 
-    1. If you select **Automatic** as the deployment type, enter the deployment name and metadata in key-value format to select the target cluster.
+    1. If you select **Automatic** as the deployment type, enter the deployment name and metadata in the key-value format to select the target cluster.
 
     1. If you select **Manual** as the deployment type, enter the deployment name and select the clusters from the list of clusters.
 
 1. Click **Next** to view the Review page.
 
-1. Verify if the deployment details are correct and click **Deploy**.
+1. Verify that the deployment details are correct and click **Deploy**.
 
 After a few minutes, the deployment will start and will take about 5 minutes to complete.
 
-In the Edge Orchestrator Web UI, you can track the application installation through the [View Deployment Details](<https://docs.openedgeplatform.intel.com/edge-manage-docs/main/user_guide/package_software/deployment_details.html#view-deployment-details>) view.
+In the Edge Orchestrator Web UI, you can track the application installation through the [View Deployment Details](<https://docs.openedgeplatform.intel.com/edge-manage-docs/main/user_guide/package_software/deployment_details.html#view-deployment-details>) page.
 
 The **Smart Intersection** Sample Application is fully deployed when the applications become green and the status is shown as _Running_.
 
@@ -80,6 +80,6 @@ For more information on setting up a deployment, see [Set up a Deployment](<http
 
 1. Download the kubeconfig file of the edge node cluster that contains the deployed application. See [Kubeconfig Download](<https://docs.openedgeplatform.intel.com/edge-manage-docs/dev/user_guide/set_up_edge_infra/clusters/accessing_clusters.html>).
 
-1. Follow the steps in the **Smart Intersection** [Documentation](<how-to-deploy-helm.md#step-3-deploy-the-application-and-run-multiple-ai-pipelines>) on the usage of the application.
+1. Follow the steps in the **Smart Intersection** [Documentation](<how-to-deploy-with-helm.md#step-3-deploy-the-application-and-run-multiple-ai-pipelines>) on the usage of the application.
 
    > Note: Skip the Deploy Helm chart step.
