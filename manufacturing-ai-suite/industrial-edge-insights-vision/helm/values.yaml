@@ -115,3 +115,60 @@ volumes:
     size: 500Mi
     location: "/home/pipeline-server/models"
     hostpath: "/opt/intel/eii/models"
+
+# Nginx Reverse Proxy Configuration
+nginx:
+  replicaCount: 1
+  image:
+    repository: nginx
+    tag: "1.27-alpine"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: LoadBalancer  # or NodePort for local clusters
+    httpPort: 80
+    httpsPort: 443
+  
+  serverName: localhost
+  
+  # SSL Certificates (base64 encoded)
+  ssl:
+    cert: |
+      # Add your base64 encoded certificate here
+      # This should be generated during deployment or provided via secrets
+    key: |
+      # Add your base64 encoded private key here
+      # This should be generated during deployment or provided via secrets
+  
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Service configurations for internal communication
+dlstreamerPipelineServer:
+  service:
+    port: 8080
+
+prometheus:
+  service:
+    port: 9090
+
+mediamtx:
+  service:
+    webPort: 8889
+    webrtcPort: 8189
+
+minio:
+  service:
+    name: mraas-minio
+    port: 8000
+
+# Global proxy settings
+global:
+  httpProxy: ""
+  httpsProxy: ""
+  noProxy: "localhost,127.0.0.1,mraas-minio,dlstreamer-pipeline-server,prometheus,mediamtx"

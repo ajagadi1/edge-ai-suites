@@ -6,11 +6,11 @@ metadata:
   name: mraas-minio
   namespace: {{ .Values.namespace }}
 spec:
-  type: NodePort
+  type: ClusterIP  # Internal only - access via nginx reverse proxy
   ports:
     - name: "minio-port"
       port: 8000
-      nodePort: {{ $.Values.env.S3_STORAGE_PORT }}
+      targetPort: 8000
   selector:
     app: mraas-minio
 ---

@@ -1,0 +1,255 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "chart.fullname" . }}-nginx-config
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+data:
+  nginx.conf: |
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        upstream dlstreamer {
+            server dlstreamer-pipeline-server:{{ .Values.dlstreamerPipelineServer.service.port | default 8080 }};
+        }
+
+        upstream prometheus {
+            server prometheus:{{ .Values.prometheus.service.port | default 9090 }};
+        }
+
+        upstream mediamtx {
+            server mediamtx:{{ .Values.mediamtx.service.webPort | default 8889 }};
+        }
+
+        upstream mediamtx-webrtc {
+            server mediamtx:{{ .Values.mediamtx.service.webrtcPort | default 8189 }};
+        }
+
+        upstream minio {
+            server {{ .Values.minio.service.name | default "mraas-minio" }}:{{ .Values.minio.service.port | default 8000 }};
+        }
+
+        # HTTP server - redirect to HTTPS
+        server {
+            listen 80;
+            return 301 https://$host$request_uri;
+        }
+
+        # HTTPS server
+        server {
+            listen 443 ssl;
+            server_name {{ .Values.nginx.serverName | default "localhost" }};
+
+            # SSL configuration
+            ssl_certificate /etc/nginx/ssl/server.crt;
+            ssl_certificate_key /etc/nginx/ssl/server.key;
+            
+            # SSL security settings
+            ssl_protocols TLSv1.2 TLSv1.3;
+            ssl_ciphers HIGH:!aNULL:!MD5;
+            ssl_prefer_server_ciphers on;
+            
+            # Security headers
+            add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+            add_header X-Content-Type-Options nosniff;
+            add_header X-Frame-Options SAMEORIGIN;
+            add_header X-XSS-Protection "1; mode=block";
+
+            # Root location - redirect to main dashboard
+            location / {
+                return 301 https://$host/prometheus/;
+            }
+
+            # DL Streamer Pipeline Server API
+            location /api/ {
+                proxy_pass http://dlstreamer/;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                
+                # WebSocket support
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+            }
+
+            # Prometheus dashboard
+            location /prometheus/ {
+                proxy_pass http://prometheus/prometheus/;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+
+            # MediaMTX streams
+            location /mediamtx/ {
+                proxy_pass http://mediamtx/;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                
+                # WebSocket support for WebRTC
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+            }
+
+            # MediaMTX WebRTC endpoint
+            location /webrtc/ {
+                proxy_pass http://mediamtx-webrtc/;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                
+                # WebSocket support for WebRTC
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+            }
+
+            # MinIO dashboard
+            location /minio/ {
+                proxy_pass http://minio/minio/;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                
+                # Handle MinIO-specific headers
+                proxy_set_header X-Forwarded-Host $host;
+                proxy_set_header X-Forwarded-Server $host;
+            }
+
+            # Health check endpoint
+            location /health {
+                access_log off;
+                return 200 "healthy\n";
+                add_header Content-Type text/plain;
+            }
+        }
+    }
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "chart.fullname" . }}-nginx-ssl
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+type: Opaque
+data:
+  server.crt: {{ .Values.nginx.ssl.cert | b64enc }}
+  server.key: {{ .Values.nginx.ssl.key | b64enc }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chart.fullname" . }}-nginx
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nginx
+spec:
+  replicas: {{ .Values.nginx.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: nginx
+  template:
+    metadata:
+      labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: nginx
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+      containers:
+      - name: nginx
+        image: "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag | default "1.27-alpine" }}"
+        imagePullPolicy: {{ .Values.nginx.image.pullPolicy | default "IfNotPresent" }}
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        - name: https
+          containerPort: 443
+          protocol: TCP
+        env:
+        - name: http_proxy
+          value: {{ .Values.global.httpProxy | quote }}
+        - name: https_proxy
+          value: {{ .Values.global.httpsProxy | quote }}
+        - name: no_proxy
+          value: {{ .Values.global.noProxy | quote }}
+        - name: NO_PROXY
+          value: {{ .Values.global.noProxy | quote }}
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+          readOnly: true
+        - name: nginx-ssl
+          mountPath: /etc/nginx/ssl
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: https
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: https
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          {{- toYaml .Values.nginx.resources | nindent 10 }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: {{ include "chart.fullname" . }}-nginx-config
+      - name: nginx-ssl
+        secret:
+          secretName: {{ include "chart.fullname" . }}-nginx-ssl
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "chart.fullname" . }}-nginx
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nginx
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: http
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: https
+    protocol: TCP
+    name: https
+  selector:
+    {{- include "chart.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: nginx
