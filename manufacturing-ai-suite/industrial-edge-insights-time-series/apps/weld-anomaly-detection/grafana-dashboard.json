@@ -100,6 +100,21 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anomalous"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-red",
+                  "mode": "fixed"
+                }
+              }
+            ]
           }
         ]
       },
@@ -115,7 +130,7 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "timezone": [
           "Asia/Kolkata"
@@ -129,7 +144,7 @@
       "pluginVersion": "12.0.0",
       "targets": [
         {
-          "alias": "Anomaly 0",
+          "alias": "Non Anomalous ",
           "datasource": {
             "type": "influxdb",
             "uid": "P951FEA4DE68E13C5"
@@ -152,7 +167,7 @@
           "measurement": "weld-sensor-anomaly-data",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT \"CO2 Weld Flow\" FROM \"autogen\".\"weld-sensor-anomaly-data\" WHERE (\"anomaly_status\"= 0) AND $timeFilter",
+          "query": "SELECT \"Primary Weld Current\" FROM \"autogen\".\"weld-sensor-anomaly-data\" WHERE (\"anomaly_status\"= 0) AND $timeFilter",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -160,7 +175,7 @@
             [
               {
                 "params": [
-                  "CO2 Weld Flow"
+                  "Primary Weld Current"
                 ],
                 "type": "field"
               },
@@ -179,7 +194,7 @@
           ]
         },
         {
-          "alias": " Anomaly 1",
+          "alias": "Anomalous",
           "columns": [],
           "datasource": {
             "type": "influxdb",
@@ -200,7 +215,7 @@
           "measurement": "weld-sensor-anomaly-data",
           "orderByTime": "ASC",
           "policy": "autogen",
-          "query": "SELECT \"CO2 Weld Flow\" FROM \"autogen\".\"weld-sensor-anomaly-data\" WHERE (\"anomaly_status\"= 1) AND $timeFilter",
+          "query": "SELECT \"Primary Weld Current\" FROM \"autogen\".\"weld-sensor-anomaly-data\" WHERE (\"anomaly_status\"= 1) AND $timeFilter",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -209,7 +224,7 @@
             [
               {
                 "params": [
-                  "CO2 Weld Flow"
+                  "Primary Weld Current"
                 ],
                 "type": "field"
               }
@@ -231,7 +246,7 @@
           }
         }
       ],
-      "title": "Anomaly Prediction for Weld Sensor Data (CO2)",
+      "title": "Anomaly Prediction for Weld Sensor Data (Primary Weld Current vs time)",
       "type": "timeseries"
     },
     {
@@ -736,7 +751,7 @@
     "list": []
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-5m",
     "to": "now"
   },
   "timepicker": {},
