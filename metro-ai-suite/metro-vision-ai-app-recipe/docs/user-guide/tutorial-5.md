@@ -1,4 +1,4 @@
-# Customizing Node-RED Flows for Hotspot Analytics Applications
+## Customizing Node-RED Flows for Hotspot Analytics Applications
 
 <!--
 **Sample Description**: This tutorial demonstrates how to customize Node-RED flows to process vehicle detection data and implement hotspot analytics logic, enabling real-time hotspot formation detection and proximity analysis.
@@ -121,7 +121,7 @@ Create a debug node to monitor incoming vehicle detection data:
    If you don't see data in the debug panel, execute the crowd analytics pipeline:
 
    ```bash
-   curl -k -s https://localhost/api/pipelines/user_defined_pipelines/yolov10_1_cpu -X POST -H 'Content-Type: application/json' -d '
+   curl -k -s https://localhost/api/pipelines/user_defined_pipelines/yolov11s_crowd_analytics -X POST -H 'Content-Type: application/json' -d '
    {
        "source": {
            "uri": "file:///home/pipeline-server/videos/easy1.mp4",
@@ -171,7 +171,7 @@ if (typeof msg.payload === 'string') {
 }
 
 // Check if payload exists and has metadata.objects array
-if (!msg.payload || !msg.payload.metadata || !msg.payload.metadata.objects || 
+if (!msg.payload || !msg.payload.metadata || !msg.payload.metadata.objects ||
     !Array.isArray(msg.payload.metadata.objects)) {
     return null; // Ignore frames without vehicle data
 }
@@ -187,34 +187,34 @@ let frameHeight = metadata.height || 1080;
 // Process each detected object
 for (let i = 0; i < metadata.objects.length; i++) {
     let obj = metadata.objects[i];
-    
+
     // Filter for cars only (you can add more vehicle types if needed)
     let vehicleTypes = ['car', 'truck', 'bus', 'motorcycle', 'vehicle'];
-    if (!obj.detection || !obj.detection.label || 
+    if (!obj.detection || !obj.detection.label ||
         !vehicleTypes.includes(obj.detection.label.toLowerCase())) {
         continue; // Skip non-vehicle objects
     }
-    
+
     // Extract bounding box coordinates (x, y, w, h format)
     let x = obj.x || 0;
     let y = obj.y || 0;
     let w = obj.w || 0;
     let h = obj.h || 0;
-    
+
     if (w === 0 || h === 0) {
         continue; // Skip objects without valid dimensions
     }
-    
+
     // Calculate centroid coordinates (center of bounding box)
     let centerX = x + (w / 2);
     let centerY = y + (h / 2);
-    
+
     // Calculate bounding box area
     let area = w * h;
-    
+
     // Get normalized coordinates from detection bounding_box
     let bbox = obj.detection.bounding_box || {};
-    
+
     // Create vehicle object
     let vehicle = {
         id: obj.id || `vehicle_${i}`,
@@ -239,7 +239,7 @@ for (let i = 0; i < metadata.objects.length; i++) {
         },
         timestamp: frameTimestamp
     };
-    
+
     vehicles.push(vehicle);
 }
 
@@ -302,7 +302,7 @@ let currentTimestamp = msg.payload.timestamp;
 const DISTANCE_THRESHOLD = 150;        // pixels - maximum distance between parked cars to form a hotspot
 const MIN_HOTSPOT_SIZE = 2;            // minimum vehicles to form a hotspot
 const PARKED_THRESHOLD = 10;           // pixels - maximum movement to be considered parked
-const PARKED_FRAMES_REQUIRED = 10;     // number of frames vehicle must be stationary to be considered parked
+const PARKED_FRAMES_REQUIRED = 120;     // number of frames vehicle must be stationary to be considered parked
 const HISTORY_TIMEOUT = 5000;          // ms - remove vehicle from history after this time
 
 // Function to calculate Euclidean distance between two points
@@ -318,14 +318,14 @@ function calculateBBoxOverlap(bbox1, bbox2) {
     let yTop = Math.max(bbox1.y, bbox2.y);
     let xRight = Math.min(bbox1.x + bbox1.width, bbox2.x + bbox2.width);
     let yBottom = Math.min(bbox1.y + bbox1.height, bbox2.y + bbox2.height);
-    
+
     if (xRight < xLeft || yBottom < yTop) {
         return 0;
     }
-    
+
     let intersectionArea = (xRight - xLeft) * (yBottom - yTop);
     let union = bbox1.area + bbox2.area - intersectionArea;
-    
+
     return intersectionArea / union;
 }
 
@@ -342,7 +342,7 @@ let parkedVehicles = [];
 
 for (let vehicle of vehicles) {
     let vehicleId = vehicle.id; // <-- This ID comes from gvatrack!
-    
+
     if (!context.vehicleHistory[vehicleId]) {
         // New vehicle detected
         context.vehicleHistory[vehicleId] = {
@@ -358,15 +358,15 @@ for (let vehicle of vehicles) {
         let history = context.vehicleHistory[vehicleId];
         let lastPosition = history.positions[history.positions.length - 1];
         let movement = calculateDistance(vehicle.position, lastPosition);
-        
+
         // Update position history (keep last 20 positions)
         history.positions.push(vehicle.position);
         if (history.positions.length > 20) {
             history.positions.shift();
         }
-        
+
         history.lastSeen = currentTimestamp;
-        
+
         // Check if vehicle is stationary
         if (movement <= PARKED_THRESHOLD) {
             history.stationaryFrames++;
@@ -374,13 +374,13 @@ for (let vehicle of vehicles) {
             history.stationaryFrames = 0; // Reset if vehicle moved
             history.isParked = false;
         }
-        
+
         // Mark as parked if stationary for required frames
         if (history.stationaryFrames >= PARKED_FRAMES_REQUIRED) {
             history.isParked = true;
         }
     }
-    
+
     // Add to parked vehicles list if confirmed parked
     if (context.vehicleHistory[vehicleId].isParked) {
         parkedVehicles.push({
@@ -421,7 +421,7 @@ for (let i = 0; i < parkedVehicles.length; i++) {
         } else {
             let distance = calculateDistance(parkedVehicles[i].position, parkedVehicles[j].position);
             distanceMatrix[i][j] = distance;
-            
+
             if (distance <= DISTANCE_THRESHOLD) {
                 let overlap = calculateBBoxOverlap(parkedVehicles[i].bbox, parkedVehicles[j].bbox);
                 proximityPairs.push({
@@ -443,7 +443,7 @@ let hotspots = [];
 function findHotspot(vehicleIndex, currentHotspot) {
     visited[vehicleIndex] = true;
     currentHotspot.push(vehicleIndex);
-    
+
     for (let j = 0; j < parkedVehicles.length; j++) {
         if (!visited[j] && distanceMatrix[vehicleIndex][j] <= DISTANCE_THRESHOLD) {
             let overlap = calculateBBoxOverlap(parkedVehicles[vehicleIndex].bbox, parkedVehicles[j].bbox);
@@ -459,14 +459,14 @@ for (let i = 0; i < parkedVehicles.length; i++) {
     if (!visited[i]) {
         let hotspot = [];
         findHotspot(i, hotspot);
-        
+
         if (hotspot.length >= MIN_HOTSPOT_SIZE) {
             let hotspotVehicles = hotspot.map(idx => parkedVehicles[idx]);
-            
+
             // Calculate hotspot centroid
             let centroidX = hotspotVehicles.reduce((sum, v) => sum + v.position.x, 0) / hotspotVehicles.length;
             let centroidY = hotspotVehicles.reduce((sum, v) => sum + v.position.y, 0) / hotspotVehicles.length;
-            
+
             // Calculate hotspot length (maximum distance between any two parked vehicles)
             let distances = [];
             for (let m = 0; m < hotspot.length; m++) {
@@ -474,30 +474,30 @@ for (let i = 0; i < parkedVehicles.length; i++) {
                     distances.push(distanceMatrix[hotspot[m]][hotspot[n]]);
                 }
             }
-            
-            let avgDistance = distances.length > 0 ? 
+
+            let avgDistance = distances.length > 0 ?
                 distances.reduce((sum, d) => sum + d, 0) / distances.length : 0;
             let maxDistance = distances.length > 0 ? Math.max(...distances) : 0;
             let minDistance = distances.length > 0 ? Math.min(...distances) : 0;
-            
+
             // Calculate hotspot bounding box
             let minX = Math.min(...hotspotVehicles.map(v => v.bbox.x));
             let minY = Math.min(...hotspotVehicles.map(v => v.bbox.y));
             let maxX = Math.max(...hotspotVehicles.map(v => v.bbox.x + v.bbox.width));
             let maxY = Math.max(...hotspotVehicles.map(v => v.bbox.y + v.bbox.height));
-            
+
             let hotspotWidth = maxX - minX;
             let hotspotHeight = maxY - minY;
-            
+
             // Calculate hotspot density
             let hotspotArea = Math.PI * Math.pow(maxDistance / 2, 2);
             let density = hotspotVehicles.length / (hotspotArea || 1);
-            
+
             // Generate persistent hotspot ID based on vehicle IDs
             // Vehicles with same IDs get same hotspot ID across frames
             let vehicleIdSet = hotspotVehicles.map(v => v.id).sort().join('_');
             let hotspotId = `hotspot_${vehicleIdSet}`;
-            
+
             hotspots.push({
                 id: hotspotId,
                 vehicle_count: hotspotVehicles.length,
@@ -507,9 +507,9 @@ for (let i = 0; i < parkedVehicles.length; i++) {
                     confidence: v.confidence,
                     parked_duration_ms: v.parked_duration_ms
                 })),
-                centroid: { 
-                    x: Math.round(centroidX), 
-                    y: Math.round(centroidY) 
+                centroid: {
+                    x: Math.round(centroidX),
+                    y: Math.round(centroidY)
                 },
                 avg_distance: Math.round(avgDistance * 100) / 100,
                 max_distance: Math.round(maxDistance * 100) / 100,
@@ -577,21 +577,21 @@ let tableData = hotspots.map((hotspot, index) => {
     let totalDuration = 0;
     let totalFrames = 0;
     let vehicleIds = [];
-    
+
     // hotspot.vehicles is an array of vehicle objects with parked_duration_ms
     for (let vehicle of hotspot.vehicles) {
         vehicleIds.push(vehicle.id);
         totalDuration += vehicle.parked_duration_ms || 0;
-        
+
         // Calculate frames from duration if not available (assuming 30fps)
         let frames = vehicle.parked_frames || Math.round((vehicle.parked_duration_ms || 0) / 33.33);
         totalFrames += frames;
     }
-    
+
     let vehicleCount = hotspot.vehicles.length;
     let avgDurationSec = vehicleCount > 0 ? Math.round(totalDuration / vehicleCount / 1000) : 0;
     let avgFrames = vehicleCount > 0 ? Math.round(totalFrames / vehicleCount) : 0;
-    
+
     return {
         timestamp: timestamp,
         hotspot_id: hotspot.id,
@@ -901,7 +901,7 @@ Consider these enhancements:
 - **Solution**: 
   ```bash
   # Verify crowd analytics pipeline is running
-  curl -k -s https://localhost/api/pipelines/user_defined_pipelines/yolov10_1_cpu
+  curl -k -s https://localhost/api/pipelines/user_defined_pipelines/yolov11s_crowd_analytics
   # Check MQTT broker connectivity
   docker logs <mqtt-container-name>
   ```
