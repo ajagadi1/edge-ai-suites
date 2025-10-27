@@ -6,11 +6,22 @@ awk_utils='
     n=asort(values,v_sorted,"@val_num_asc")
     return v_sorted[(n%2 == 0)?n/2:(n+1)/2]
   }
+  function calc_percentile(values,p, v_sorted,i,ii) {
+    if (length(values)==0) return 0
+    i=asort(values,v_sorted,"@val_num_asc")*p
+    ii=int(i)
+    return v_sorted[i>ii?ii+1:(ii==0?1:ii)]
+  }
   function calc_median_if_matched(vt,m,vl ,i,tmp,ct) {
     ct=0
     split("",tmp)
     for (i in vt) if (vt[i]==m) tmp[++ct]=vl[i]
     return calc_median(tmp)
+  }
+  function calc_max_if_matched(vt,m,vl ,i,tmp,ct) {
+    max=0
+    for (i in vt) if (vt[i]==m && vl[i]>max) max=vl[i]
+    return max
   }
   function calc_sum(values, m,i,nv) {
     m=0
@@ -62,38 +73,23 @@ function check_and_loop_video() {
   # Extract just the filename from the URI (handle file:// prefix and paths)
   local filename=$(basename "$source_uri")
   
-  # Debug: Show what file we're checking
-  echo "Checking video file: $filename" >&2
-  
-  # Check if filename ends with _looped.mp4 or _looped.avi
-  if [[ "$filename" =~ _looped\.(mp4|avi)$ ]]; then
-    echo "Found looped video request: $filename" >&2
-    # Extract base filename (remove _looped suffix but keep original extension)
-    local base_filename="${filename/_looped/}"
-    echo "Looking for base file: $base_filename" >&2
+  # Check if filename ends with _looped.mp4
+  if [[ "$filename" =~ _looped\.mp4$ ]]; then
+    # Extract base filename (remove _looped.mp4 suffix)
+    local base_filename="${filename%_looped.mp4}.mp4"
     
     # Search for the base file in common video locations
     local base_file=""
     local search_paths=(
-      "./resources/pallet-defect-detection/videos"
-      "./resources/pcb-anomaly-detection/videos"
-      "./resources/weld-porosity/videos"
-      "./resources/worker-safety-gear-detection/videos"
+      "/home/user/EABP_Test/edge-ai-suites/manufacturing-ai-suite/industrial-edge-insights-vision/resources/pallet-defect-detection/videos"
+      "/home/user/EABP_Test/edge-ai-suites/manufacturing-ai-suite/industrial-edge-insights-vision/resources/pcb-anomaly-detection/videos"
+      "/home/user/EABP_Test/edge-ai-suites/manufacturing-ai-suite/industrial-edge-insights-vision/resources/weld-porosity/videos"
+      "/home/user/EABP_Test/edge-ai-suites/manufacturing-ai-suite/industrial-edge-insights-vision/resources/worker-safety-gear-detection/videos"
     )
     
-    # First check if the requested looped file already exists in any search path
-    for search_path in "${search_paths[@]}"; do
-      if [ -f "$search_path/$filename" ]; then
-        echo "Looped video already exists: $search_path/$filename" >&2
-        return 0
-      fi
-    done
-    
-    # If not, look for the base file to create the looped version
     for search_path in "${search_paths[@]}"; do
       if [ -f "$search_path/$base_filename" ]; then
         base_file="$search_path/$base_filename"
-        echo "Found base file: $base_file" >&2
         break
       fi
     done
@@ -105,9 +101,8 @@ function check_and_loop_video() {
     
     # Determine output path (same directory as base file)
     local output_file="$(dirname "$base_file")/$filename"
-    echo "Would create looped file at: $output_file" >&2
     
-    # Skip if looped file already exists (double-check)
+    # Skip if looped file already exists
     if [ -f "$output_file" ]; then
       echo "Looped video already exists: $output_file" >&2
       return 0
@@ -121,17 +116,14 @@ function check_and_loop_video() {
     
     echo "Creating looped video: $output_file from $base_file" >&2
     
-    # Create looped video - handle different container formats
+    # Create looped video with moov atom at the beginning for streaming
     # -stream_loop 10: loop the video 10 times
     # -c copy: copy codec without re-encoding
-    local ffmpeg_opts="-stream_loop 10 -i \"$base_file\" -c copy"
-    
-    # Only add movflags for MP4 containers (not for AVI)
-    if [[ "$output_file" =~ \.mp4$ ]]; then
-      ffmpeg_opts="$ffmpeg_opts -movflags +faststart"
-    fi
-    
-    eval "ffmpeg $ffmpeg_opts \"$output_file\" -y" 2>&1 | grep -v "frame=" >&2
+    # -movflags +faststart: move moov atom to the beginning for streaming
+    ffmpeg -stream_loop 10 -i "$base_file" \
+      -c copy \
+      -movflags +faststart \
+      "$output_file" -y 2>&1 | grep -v "frame=" >&2
     
     if [ $? -ne 0 ]; then
       echo "Error: Failed to create looped video." >&2
@@ -157,27 +149,13 @@ function run_pipelines() {
     current_payload=$payload_data
 
     if echo "$payload_data" | jq -e '.destination' > /dev/null; then
-        # Determine model type based on parameters
-        model_type="detection"
-        if echo "$payload_data" | jq -e '.parameters."classification-properties"' > /dev/null 2>&1; then
-            model_type="classification"
-        elif echo "$payload_data" | jq -e '.parameters."detection-properties"' > /dev/null 2>&1; then
-            model_type="detection"
-        fi
-        
         current_payload=$(echo "$payload_data" | jq \
-            --arg peer_id "${model_type}_$x" \
-            '.destination.frame."peer-id" = $peer_id
+            --arg topic "object_detection_$x" \
+            --arg peer_id "object_detection_$x" \
+            '.destination.metadata.topic = $topic |
+            .destination.frame."peer-id" = $peer_id
             '
         )
-        
-        # Only add metadata.topic if the metadata field exists
-        if echo "$current_payload" | jq -e '.destination.metadata' > /dev/null 2>&1; then
-            current_payload=$(echo "$current_payload" | jq \
-                --arg topic "${model_type}_$x" \
-                '.destination.metadata.topic = $topic'
-            )
-        fi
     fi
 
 echo -e "\n\nDEBUG - Payload for stream $x:" >&2
@@ -199,27 +177,27 @@ echo -e "\n\nDEBUG - Payload for stream $x:" >&2
       echo "Response: $response_body" >&2
       return 1
     fi
-    sleep 2 # Wait 2 seconds before starting next pipeline
+    sleep 1 # Brief pause between requests
   done
     
-  # Wait for all pipelines to be in RUNNING or COMPLETED state
+  # Wait for all pipelines to be in RUNNING state
   echo -n ">>>>> Waiting for pipelines to initialize..." >&2
-  local active_count=0
+  local running_count=0
   local attempts=0
-  while [ "$active_count" -lt "$num_pipelines" ] && [ "$attempts" -lt 60 ]; do
+  while [ "$running_count" -lt "$num_pipelines" ] && [ "$attempts" -lt 60 ]; do
     status_output=$(get_pipeline_status)
-    active_count=$(echo "$status_output" | jq '[.[] | select(.state=="RUNNING" or .state=="COMPLETED")] | length')
+    running_count=$(echo "$status_output" | jq '[.[] | select(.state=="RUNNING")] | length')
     
     echo -n "." >&2
     attempts=$((attempts + 1))
-    sleep 1
+    sleep 2
   done
   
-  if [ "$active_count" -ge "$num_pipelines" ]; then
-    echo " All pipelines are active (running or completed)." >&2
+  if [ "$running_count" -ge "$num_pipelines" ]; then
+    echo " All pipelines are running." >&2
     return 0
   else
-    echo " Error: Not all pipelines entered active state." >&2
+    echo " Error: Not all pipelines entered RUNNING state." >&2
     get_pipeline_status | jq . >&2
     return 1
   fi
@@ -300,7 +278,7 @@ function run_and_analyze_workload() {
     while (( SECONDS - start_time < MAX_DURATION )); do
         local elapsed_time=$((SECONDS - start_time))
         echo -ne "Monitoring... ${elapsed_time}s / ${MAX_DURATION}s\r" >&2
-        get_pipeline_status > "benchmark-$num_streams/sample.logs" 2>/dev/null
+        get_pipeline_status >> "benchmark-$num_streams/sample.logs" 2>/dev/null
         sleep 1
     done
     echo -ne "\n" >&2
@@ -308,7 +286,7 @@ function run_and_analyze_workload() {
     stop_all_pipelines
 
     # NOTE: To convert to a full orchestrator, add 'docker compose down' here.
-    gawk -v ns=$num_streams "$awk_utils"'
+    gawk -v ns=$num_streams -v percentile=${THROUGHPUT_PERCENTILE:-0.9} "$awk_utils"'
     /^\[/ {
       split("",fps_running)
       ns_running=0
@@ -316,41 +294,31 @@ function run_and_analyze_workload() {
     /"avg_fps":/ {
       fps=$2*1
     }
-    /"state": "RUNNING"/ || /"state": "COMPLETED"/ {
+    /"state": "RUNNING"/ {
       fps_running[++ns_running]=fps
     }
-    /^\]/ {
-      # Accept samples with target streams or fewer (for when pipelines end)
-      if (ns_running >= ns) {
-        # Take only the first ns streams if we have more than expected
-        for (i=1;i<=ns;i++)
-          throughput[i][++throughput_ct[i]]=fps_running[i]
-      } else if (ns_running > 0) {
-        # If we have fewer streams (pipelines ended), still record them
-        for (i=1;i<=ns_running;i++)
-          throughput[i][++throughput_ct[i]]=fps_running[i]
-      }
+    /^\]/ && ns_running==ns {
+      for (i=1;i<=ns;i++)
+        throughput[i][++throughput_ct[i]]=fps_running[i]
     }
     END {
-      ns_actual=length(throughput)
-      if (ns_actual>0) {
+      ns=length(throughput)
+      if (ns>0) {
         ns1=0
-        for (i=1;i<=ns_actual;i++) {
-          throughput_med[i]=calc_median(throughput[i])
-          if (throughput_med[i]>0) {
+        for (i=1;i<=ns;i++) {
+          throughput_p[i]=calc_percentile(throughput[i],percentile)
+          if (throughput_p[i]>0) {
             throughput_std[i]=calc_stdev(throughput[i])
-            print "throughput #"i": "throughput_med[i]
+            print "throughput #"i": "throughput_p[i]
             ns1++
           }
         }
-        if (ns1>0) {
-          print "throughput median: "calc_median(throughput_med)
-          print "throughput average: "calc_avg(throughput_med)
-          print "throughput stdev: "calc_max(throughput_std)
-          print "throughput cumulative: "calc_sum(throughput_med)
-          mm=(ns1<ns_actual)?0:calc_min(throughput_med)
-          print "throughput median-min: "mm
-        }
+        print "throughput median: "calc_median(throughput_p)
+        print "throughput average: "calc_avg(throughput_p)
+        print "throughput stdev: "calc_max(throughput_std)
+        print "throughput cumulative: "calc_sum(throughput_p)
+        mm=(ns1<ns)?0:calc_min(throughput_p)
+        print "throughput min: "mm
       }
     }
   ' "benchmark-$num_streams/sample.logs" > "benchmark-$num_streams/kpi.txt"
@@ -359,49 +327,62 @@ function run_and_analyze_workload() {
 run_workload_with_retries () {
   local num_streams=$1
   local throughput=0
+  local throughput_max=0
   local retry_ct=0
-  local stdev
   while [ $retry_ct -lt ${RETRY_TIMES:-1} ]; do
     echo "Invoking workload with $num_streams streams...try#$retry_ct" >&2
-    run_and_analyze_workload "$num_streams" >/dev/null 2>&1 || break
-    sed "s|^|stream-density#$num_streams: |" "benchmark-$num_streams/kpi.txt" >&2
-    throughput=$(grep -m1 -F 'throughput median-min:' "benchmark-$num_streams/kpi.txt" | cut -f2 -d: | tr -d ' ')
-    echo "${throughput:-0} ${target_fps}" | gawk '{exit($1<$2?0:1)}' || break
-    stdev=$(grep -m1 -F 'throughput stdev:' "benchmark-$num_streams/kpi.txt" | cut -f2 -d: | tr -d ' ')
-    echo "${stdev:-${RETRY_STDEV:-0}} ${RETRY_STDEV:-0}" | gawk '{exit($1>=$2?0:1)}' || break
+    if run_and_analyze_workload "$num_streams" >/dev/null 2>&1; then
+      sed "s|^|stream-density#$num_streams: |" "benchmark-$num_streams/kpi.txt" >&2
+      throughput=$(grep -m1 -F 'throughput min:' "benchmark-$num_streams/kpi.txt" | cut -f2 -d: | tr -d ' ')
+      if echo "${throughput:-0} $target_fps" | gawk '{exit($1>=$2?0:1)}'; then
+        echo "$throughput"
+        return 0
+      fi
+      if echo "${throughput:-0} $throughput_max" | gawk '{exit($1>$2?0:1)}'; then
+        throughput_max=$throughput
+        rm -rf "benchmark-$num_streams.max"
+        mv -f "benchmark-$num_streams" "benchmark-$num_streams.max"
+      fi
+    fi
     let retry_ct++
   done
-  echo "$throughput"
+  if [ -d "benchmark-$num_streams.max" ]; then
+    rm -rf "benchmark-$num_streams"
+    mv -f "benchmark-$num_streams.max" "benchmark-$num_streams"
+  fi
+  echo "$throughput_max"
 }
 
 # --- Main Script ---
 
 function usage() {
-    echo "Usage: $0 -p <payload_file> -l <lower_bound> -u <upper_bound> [-t <target_fps>] [-i <interval>]"
+    echo "Usage: $0 -p <payload_file> -l <lower_bound> -u <upper_bound> [-t <target_fps>] [-i <interval>] [-c <throughput_percentile>]"
     echo
     echo "Arguments:"
     echo "  -p <payload_file>    : (Required) Path to the benchmark payload JSON file."
-    echo "                         Supports both gpu_payload.json and benchmark_gpu_payload.json files."
     echo "  -l <lower_bound>     : (Required) The starting lower bound for the number of streams."
     echo "  -u <upper_bound>     : (Required) The starting upper bound for the number of streams."
     echo "  -t <target_fps>      : Target FPS for stream-density mode (default: 14.95)."
     echo "  -i <interval>        : Monitoring duration in seconds for each test run (default: 60)."
+    echo "  -c <throughput_percentile> : Throughput percentile for KPI calculation (default: 0.9)."
     exit 1
 }
 
 payload_file=""
 target_fps="14.95"
 MAX_DURATION=60
+THROUGHPUT_PERCENTILE="0.9"
 lower_bound=""
 upper_bound=""
 
-while getopts "p:l:u:t:i:" opt; do
+while getopts "p:l:u:t:i:c:" opt; do
   case ${opt} in
     p ) payload_file=$OPTARG ;;
     l ) lower_bound=$OPTARG ;;
     u ) upper_bound=$OPTARG ;;
     t ) target_fps=$OPTARG ;;
     i ) MAX_DURATION=$OPTARG ;;
+    c ) THROUGHPUT_PERCENTILE=$OPTARG ;;
     \? ) usage ;;
   esac
 done
@@ -416,11 +397,6 @@ if [ ! -f "$payload_file" ]; then
     exit 1
 fi
 
-# Display which payload file and pipeline will be used
-pipeline_name=$(jq -r '.[0].pipeline' "$payload_file" 2>/dev/null)
-echo "Using payload file: $payload_file" >&2
-echo "Pipeline: $pipeline_name" >&2
-
 echo ">>>>> Performing pre-flight checks..." >&2
 if ! curl -k -s --fail "https://$DLSPS_NODE_IP/api/pipelines/status" > /dev/null; then
     echo "Error: DL Streamer Pipeline Server is not running or not reachable at https://$DLSPS_NODE_IP" >&2
@@ -433,20 +409,6 @@ if [ $? -ne 0 ]; then
    exit 1
 fi
 
-# Clean up old completed pipelines to avoid interference
-echo ">>>>> Cleaning up old completed pipelines..." >&2
-old_pipelines=$(curl -k -s "https://$DLSPS_NODE_IP/api/pipelines/status" | jq -r '[.[] | select(.state=="COMPLETED" or .state=="ABORTED") | .id] | join(",")')
-if [ -n "$old_pipelines" ]; then
-    IFS=',' read -ra old_pipeline_ids <<< "$old_pipelines"
-    for pipeline_id in "${old_pipeline_ids[@]}"; do
-        curl -k -s --location -X DELETE "https://$DLSPS_NODE_IP/api/pipelines/${pipeline_id}" >/dev/null &
-    done
-    wait
-    echo "Cleaned up ${#old_pipeline_ids[@]} old pipelines." >&2
-else
-    echo "No old pipelines to clean up." >&2
-fi
-
 records=""
 ns=$lower_bound
 tns=0
@@ -454,22 +416,24 @@ lns=$lower_bound
 uns=$upper_bound
 
 [[ "$@" = *"--trace"* && $lns -lt $uns ]] || echo "Start-Trace:"
-while [ $((uns)) -gt $((lns)) ]; do
-  ns=$(( (lns + uns + 1) / 2 ))
+while [ $((uns - lns)) -gt 1 ] || [[ "$records" != *" $lns:"* ]] || [[ "$records" != *" $uns:"* ]]; do
   if [[ "$records" = *" $ns:"* ]]; then
     throughput=${records##* $ns:}
     throughput=${throughput%% *}
   else
-    throughput=$(run_workload_with_retries $ns 2>/dev/null)
+    throughput=$(run_workload_with_retries $ns)
   fi
   records="$records $ns:$throughput"
 
   echo "streams: $ns throughput: $throughput range: [$lns,$uns]"
 
-  if [ "$(echo "${throughput:-0} >= $target_fps" | bc)" -eq 1 ]; then
-    lns=$ns
+  if echo "${throughput:-0} $target_fps" | gawk '{exit($1<$2?0:1)}'; then
+    uns=$ns
+    ns=$(echo "$lns $ns" | gawk '{n=int(($1+$2)/2);m=int($2/2);n=(n<m?m:n);print (n<1?1:n)}')
   else
-    uns=$((ns - 1))
+    [ $ns -le $tns ] || tns=$ns
+    lns=$ns
+    ns=$(echo "$ns $uns" | gawk '{n=int(($1+$2)/2+0.5);m=$1*2;print (n>m?m:n)}')
   fi
 done
 tns=$lns
