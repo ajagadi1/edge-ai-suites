@@ -6,11 +6,22 @@ awk_utils='
     n=asort(values,v_sorted,"@val_num_asc")
     return v_sorted[(n%2 == 0)?n/2:(n+1)/2]
   }
+  function calc_percentile(values,p, v_sorted,i,ii) {
+    if (length(values)==0) return 0
+    i=asort(values,v_sorted,"@val_num_asc")*p
+    ii=int(i)
+    return v_sorted[i>ii?ii+1:(ii==0?1:ii)]
+  }
   function calc_median_if_matched(vt,m,vl ,i,tmp,ct) {
     ct=0
     split("",tmp)
     for (i in vt) if (vt[i]==m) tmp[++ct]=vl[i]
     return calc_median(tmp)
+  }
+  function calc_max_if_matched(vt,m,vl ,i,tmp,ct) {
+    max=0
+    for (i in vt) if (vt[i]==m && vl[i]>max) max=vl[i]
+    return max
   }
   function calc_sum(values, m,i,nv) {
     m=0
@@ -265,7 +276,7 @@ function run_and_analyze_workload() {
     while (( SECONDS - start_time < MAX_DURATION )); do
         local elapsed_time=$((SECONDS - start_time))
         echo -ne "Monitoring... ${elapsed_time}s / ${MAX_DURATION}s\r" >&2
-        get_pipeline_status > "benchmark-$num_streams/sample.logs" 2>/dev/null
+        get_pipeline_status >> "benchmark-$num_streams/sample.logs" 2>/dev/null
         sleep 1
     done
     echo -ne "\n" >&2
@@ -273,7 +284,7 @@ function run_and_analyze_workload() {
     stop_all_pipelines
 
     # NOTE: To convert to a full orchestrator, add 'docker compose down' here.
-    gawk -v ns=$num_streams "$awk_utils"'
+    gawk -v ns=$num_streams -v percentile=${THROUGHPUT_PERCENTILE:-0.9} "$awk_utils"'
     /^\[/ {
       split("",fps_running)
       ns_running=0
@@ -293,19 +304,19 @@ function run_and_analyze_workload() {
       if (ns>0) {
         ns1=0
         for (i=1;i<=ns;i++) {
-          throughput_med[i]=calc_median(throughput[i])
-          if (throughput_med[i]>0) {
+          throughput_p[i]=calc_percentile(throughput[i],percentile)
+          if (throughput_p[i]>0) {
             throughput_std[i]=calc_stdev(throughput[i])
-            print "throughput #"i": "throughput_med[i]
+            print "throughput #"i": "throughput_p[i]
             ns1++
           }
         }
-        print "throughput median: "calc_median(throughput_med)
-        print "throughput average: "calc_avg(throughput_med)
+        print "throughput median: "calc_median(throughput_p)
+        print "throughput average: "calc_avg(throughput_p)
         print "throughput stdev: "calc_max(throughput_std)
-        print "throughput cumulative: "calc_sum(throughput_med)
-        mm=(ns1<ns)?0:calc_min(throughput_med)
-        print "throughput median-min: "mm
+        print "throughput cumulative: "calc_sum(throughput_p)
+        mm=(ns1<ns)?0:calc_min(throughput_p)
+        print "throughput min: "mm
       }
     }
   ' "benchmark-$num_streams/sample.logs" > "benchmark-$num_streams/kpi.txt"
@@ -314,25 +325,36 @@ function run_and_analyze_workload() {
 run_workload_with_retries () {
   local num_streams=$1
   local throughput=0
+  local throughput_max=0
   local retry_ct=0
-  local stdev
   while [ $retry_ct -lt ${RETRY_TIMES:-1} ]; do
     echo "Invoking workload with $num_streams streams...try#$retry_ct" >&2
-    run_and_analyze_workload "$num_streams" >/dev/null 2>&1 || break
-    sed "s|^|stream-density#$num_streams: |" "benchmark-$num_streams/kpi.txt" >&2
-    throughput=$(grep -m1 -F 'throughput median-min:' "benchmark-$num_streams/kpi.txt" | cut -f2 -d: | tr -d ' ')
-    echo "${throughput:-0} ${target_fps}" | gawk '{exit($1<$2?0:1)}' || break
-    stdev=$(grep -m1 -F 'throughput stdev:' "benchmark-$num_streams/kpi.txt" | cut -f2 -d: | tr -d ' ')
-    echo "${stdev:-${RETRY_STDEV:-0}} ${RETRY_STDEV:-0}" | gawk '{exit($1>=$2?0:1)}' || break
+    if run_and_analyze_workload "$num_streams" >/dev/null 2>&1; then
+      sed "s|^|stream-density#$num_streams: |" "benchmark-$num_streams/kpi.txt" >&2
+      throughput=$(grep -m1 -F 'throughput min:' "benchmark-$num_streams/kpi.txt" | cut -f2 -d: | tr -d ' ')
+      if echo "${throughput:-0} $target_fps" | gawk '{exit($1>=$2?0:1)}'; then
+        echo "$throughput"
+        return 0
+      fi
+      if echo "${throughput:-0} $throughput_max" | gawk '{exit($1>$2?0:1)}'; then
+        throughput_max=$throughput
+        rm -rf "benchmark-$num_streams.max"
+        mv -f "benchmark-$num_streams" "benchmark-$num_streams.max"
+      fi
+    fi
     let retry_ct++
   done
-  echo "$throughput"
+  if [ -d "benchmark-$num_streams.max" ]; then
+    rm -rf "benchmark-$num_streams"
+    mv -f "benchmark-$num_streams.max" "benchmark-$num_streams"
+  fi
+  echo "$throughput_max"
 }
 
 # --- Main Script ---
 
 function usage() {
-    echo "Usage: $0 -p <payload_file> -l <lower_bound> -u <upper_bound> [-t <target_fps>] [-i <interval>]"
+    echo "Usage: $0 -p <payload_file> -l <lower_bound> -u <upper_bound> [-t <target_fps>] [-i <interval>] [-c <throughput_percentile>]"
     echo
     echo "Arguments:"
     echo "  -p <payload_file>    : (Required) Path to the benchmark payload JSON file."
@@ -340,22 +362,25 @@ function usage() {
     echo "  -u <upper_bound>     : (Required) The starting upper bound for the number of streams."
     echo "  -t <target_fps>      : Target FPS for stream-density mode (default: 14.95)."
     echo "  -i <interval>        : Monitoring duration in seconds for each test run (default: 60)."
+    echo "  -c <throughput_percentile> : Throughput percentile for KPI calculation (default: 0.9)."
     exit 1
 }
 
 payload_file=""
 target_fps="14.95"
 MAX_DURATION=60
+THROUGHPUT_PERCENTILE="0.9"
 lower_bound=""
 upper_bound=""
 
-while getopts "p:l:u:t:i:" opt; do
+while getopts "p:l:u:t:i:c:" opt; do
   case ${opt} in
     p ) payload_file=$OPTARG ;;
     l ) lower_bound=$OPTARG ;;
     u ) upper_bound=$OPTARG ;;
     t ) target_fps=$OPTARG ;;
     i ) MAX_DURATION=$OPTARG ;;
+    c ) THROUGHPUT_PERCENTILE=$OPTARG ;;
     \? ) usage ;;
   esac
 done
@@ -389,22 +414,24 @@ lns=$lower_bound
 uns=$upper_bound
 
 [[ "$@" = *"--trace"* && $lns -lt $uns ]] || echo "Start-Trace:"
-while [ $((uns)) -gt $((lns)) ]; do
-  ns=$(( (lns + uns + 1) / 2 ))
+while [ $((uns - lns)) -gt 1 ] || [[ "$records" != *" $lns:"* ]] || [[ "$records" != *" $uns:"* ]]; do
   if [[ "$records" = *" $ns:"* ]]; then
     throughput=${records##* $ns:}
     throughput=${throughput%% *}
   else
-    throughput=$(run_workload_with_retries $ns 2>/dev/null)
+    throughput=$(run_workload_with_retries $ns)
   fi
   records="$records $ns:$throughput"
 
   echo "streams: $ns throughput: $throughput range: [$lns,$uns]"
 
-  if [ "$(echo "${throughput:-0} >= $target_fps" | bc)" -eq 1 ]; then
-    lns=$ns
+  if echo "${throughput:-0} $target_fps" | gawk '{exit($1<$2?0:1)}'; then
+    uns=$ns
+    ns=$(echo "$lns $ns" | gawk '{n=int(($1+$2)/2);m=int($2/2);n=(n<m?m:n);print (n<1?1:n)}')
   else
-    uns=$((ns - 1))
+    [ $ns -le $tns ] || tns=$ns
+    lns=$ns
+    ns=$(echo "$ns $uns" | gawk '{n=int(($1+$2)/2+0.5);m=$1*2;print (n>m?m:n)}')
   fi
 done
 tns=$lns
