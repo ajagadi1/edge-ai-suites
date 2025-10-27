@@ -493,8 +493,13 @@ for (let i = 0; i < parkedVehicles.length; i++) {
             let hotspotArea = Math.PI * Math.pow(maxDistance / 2, 2);
             let density = hotspotVehicles.length / (hotspotArea || 1);
             
+            // Generate persistent hotspot ID based on vehicle IDs
+            // Vehicles with same IDs get same hotspot ID across frames
+            let vehicleIdSet = hotspotVehicles.map(v => v.id).sort().join('_');
+            let hotspotId = `hotspot_${vehicleIdSet}`;
+            
             hotspots.push({
-                id: `hotspot_${hotspots.length + 1}`,
+                id: hotspotId,
                 vehicle_count: hotspotVehicles.length,
                 vehicles: hotspotVehicles.map(v => ({
                     id: v.id,
@@ -602,28 +607,16 @@ let tableData = hotspots.map((hotspot, index) => {
     };
 });
 
-// If no hotspots, send summary row
+// If no hotspots, don't send anything
 if (tableData.length === 0) {
-    tableData = [{
-        timestamp: timestamp,
-        hotspot_id: "none",
-        hotspot_number: 0,
-        vehicle_count: 0,
-        centroid_x: 0,
-        centroid_y: 0,
-        avg_distance_px: 0,
-        max_distance_px: 0,
-        vehicle_ids: "",
-        avg_parked_duration_sec: 0,
-        avg_parked_frames: 0
-    }];
+    return null;
 }
 
-// Send each row as a separate message for InfluxDB
-return tableData.map(row => ({
-    payload: row,
-    topic: "hotspot_analytics"
-}));
+// Split array into individual messages (one per hotspot)
+// Each hotspot becomes a separate MQTT message for proper Grafana table visualization
+return tableData.map(hotspot => {
+    return { payload: hotspot };
+});
 ```
 
 ### 8. **Configure MQTT Output for Hotspot Analytics**
@@ -699,22 +692,37 @@ The Node-RED flow publishes hotspot analytics data to a single MQTT topic:
 
 **Topic**: `hotspot_analytics`
 
-**Output Format**: One message per hotspot (table-friendly for Grafana)
+**Output Format**: Array of hotspots (one array per frame, similar to tutorial-2)
 
 ```json
-{
-  "timestamp": 1729785600000,
-  "hotspot_id": "hotspot_1",
-  "hotspot_number": 1,
-  "vehicle_count": 2,
-  "centroid_x": 783,
-  "centroid_y": 644,
-  "avg_distance_px": 95,
-  "max_distance_px": 95,
-  "vehicle_ids": "1, 6",
-  "avg_parked_duration_sec": 10,
-  "avg_parked_frames": 307
-}
+[
+  {
+    "timestamp": 1729785600000,
+    "hotspot_id": "hotspot_1",
+    "hotspot_number": 1,
+    "vehicle_count": 2,
+    "centroid_x": 783,
+    "centroid_y": 644,
+    "avg_distance_px": 95,
+    "max_distance_px": 95,
+    "vehicle_ids": "1, 6",
+    "avg_parked_duration_sec": 10,
+    "avg_parked_frames": 307
+  },
+  {
+    "timestamp": 1729785600000,
+    "hotspot_id": "hotspot_2",
+    "hotspot_number": 2,
+    "vehicle_count": 3,
+    "centroid_x": 450,
+    "centroid_y": 300,
+    "avg_distance_px": 120,
+    "max_distance_px": 140,
+    "vehicle_ids": "3, 7, 9",
+    "avg_parked_duration_sec": 15,
+    "avg_parked_frames": 450
+  }
+]
 ```
 
 **Key Fields**:
@@ -764,178 +772,115 @@ After successfully implementing hotspot analytics with Node-RED:
 
 The hotspot analytics data published to `hotspot_analytics` can be visualized in real-time using Grafana.
 
-#### **Setup MQTT Data Source in Grafana**
+#### **Quick Setup Steps**
 
-Follow the MQTT data source setup from [Tutorial 3: Customize Grafana Dashboard](./tutorial-3.md#3-create-mqtt-data-table).
+1. **Access Grafana**: Navigate to `https://localhost/grafana` (Username: `admin`, Password: `admin`)
 
-**Quick Steps:**
-
-1. **Access Grafana** (http://localhost:3000)
-   - Username: `admin`
-   - Password: `admin`
-
-2. **Add MQTT Data Source**:
+2. **Create New Dashboard**:
    - Click "+" → "Dashboard" → "Add Visualization"
-   - Select "Table" as visualization type
-   - Set data source to `grafana-mqtt-datasource`
+   - Select **Table** visualization type
+   - Set Data Source to **grafana-mqtt-datasource**
+   - Set Topic to **hotspot_analytics**
 
-3. **Configure MQTT Topic**:
-   - Topic: `hotspot_analytics`
-   - The plugin will automatically receive and parse JSON messages
+3. **Add Transformations** (Transform tab at bottom):
+   
+   **What you'll see initially**: Two columns - "Time" and "Value" (Value contains the JSON array as text)
+   
+   a. **Extract fields** (CRITICAL - parses JSON and expands array into rows):
+      - Click **"+ Add transformation"** → Select **"Extract fields"**
+      - **Source**: Select **"Value"** (with capital V - this column contains the JSON array)
+      - **Format**: Select **"Auto"** (automatically detects and parses JSON array)
+      - **Replace all fields**: ✅ **Check this box** (replaces Time/Value with expanded fields)
+      - Click **Apply**
+      
+      **Result**: The JSON array will expand into individual columns (hotspot_number, vehicle_count, etc.)
+   
+   b. **Sort by** (CRITICAL - orders data by time for deduplication):
+      - Click **"+ Add transformation"** → Select **"Sort by"**
+      - **Field**: Select **"Time"**
+      - **Order**: Select **Descending** (newest first)
+      - Click **Apply**
+      
+      **Purpose**: Ensures the most recent data for each hotspot appears first
+   
+   c. **Group by** (CRITICAL - removes duplicate hotspots):
+      - Click **"+ Add transformation"** → Select **"Group by"**
+      - **Group by**: Select **"hotspot_id"**
+      - **Calculations** (configure for each field):
+        - `timestamp`: Select **"Last"**
+        - `hotspot_number`: Select **"Last"**
+        - `vehicle_count`: Select **"Last"**
+        - `centroid_x`: Select **"Last"**
+        - `centroid_y`: Select **"Last"**
+        - `avg_distance_px`: Select **"Last"**
+        - `max_distance_px`: Select **"Last"**
+        - `vehicle_ids`: Select **"Last"**
+        - `avg_parked_duration_sec`: Select **"Last"**
+        - `avg_parked_frames`: Select **"Last"**
+      - Click **Apply**
+      
+      **Result**: Each unique hotspot_id appears only once with its most recent data
+   
+   d. **Organize fields** (Optional - for better column names):
+      - Click **"+ Add transformation"** → Select **"Organize fields by name"**
+      - Rename fields for display:
+        - `hotspot_number` → "Hotspot #"
+        - `vehicle_count` → "Vehicles"
+        - `centroid_x` → "Location X"
+        - `centroid_y` → "Location Y"
+        - `avg_distance_px` → "Avg Distance (px)"
+        - `max_distance_px` → "Max Distance (px)"
+        - `vehicle_ids` → "Vehicle IDs"
+        - `avg_parked_duration_sec` → "Parked Duration (s)"
+        - `avg_parked_frames` → "Parked Frames"
+      - Hide unwanted fields (timestamp, hotspot_id) by clicking the eye icon
 
-#### **Create Hotspot Analytics Table Panel**
-
-1. **Add New Panel** in your dashboard
-   - Click "Add" → "Visualization"
-
-2. **Select Table Visualization**
-   - At the top-left, click the dropdown (defaults to "Time series")
-   - Select **"Table"** from the list
-
-3. **Configure Data Source and Topic**:
-   - In the panel editor, find the **"Query"** section (usually at the bottom)
-   - **Data Source**: Select `grafana-mqtt-datasource` from dropdown
-   - **Topic**: Enter `hotspot_analytics`
-   
-4. **Configure Query Settings for Real-Time Streaming**:
-   - In the Query section, look for a **gear icon (⚙️)** or **"Query options"** button at the top-right of the query section
-   - Click it to expand query options
-   - Set **Max data points**: `100` (keeps last 100 messages)
-   - Set **Min interval**: `1s` (updates every second)
-   
-   > **Note**: If you don't see Query options, that's okay - the MQTT plugin will stream data in real-time by default.
-
-5. **Set Dashboard Auto-Refresh** (for real-time updates):
-   - At the top-right corner of the dashboard, click the **refresh icon dropdown** (🔄)
-   - Select **"5s"** to auto-refresh every 5 seconds
-   - Or select a faster interval like **"1s"** for near-instant updates
-
-> **Important for Real-Time Display**: The MQTT data source streams messages as they arrive. The table will show the **most recent messages** in real-time during pipeline execution, not waiting until the end.
-
-4. **Add Field Mappings via Transformations**:
-   
-   **Where to add transformations in Grafana:**
-   
-   a. In the panel editor, look for the **"Transform"** tab (next to "Query" tab at the bottom)
-   
-   b. Click **"+ Add transformation"**
-   
-   c. Select **"Extract fields"** from the transformation dropdown
-   
-   d. Configure the extraction:
-      - **Source**: Click the dropdown and look for the field containing your JSON data
-        - Try: **"Value"** (most common)
-        - Or try: **"payload"**, **"message"**, **"data"**, or any field that looks like it contains the JSON
-        - If you see a field with JSON content in the preview below, select that one
-      - **Format**: Select `JSON` from dropdown
-      - **Replace all fields**: ✅ Enable this checkbox
-      - Click **Apply** (transformation should show preview of extracted fields)
-   
-   > **Troubleshooting Source Field**: 
-   > - If "Value" is not available, check the data preview at the bottom of the panel editor
-   > - Look for which field contains your JSON data (e.g., `{"hotspot_number": 1, "vehicle_count": 2, ...}`)
-   > - Select that field name in the Source dropdown
-   > - If you only see "Time" as an option, your MQTT messages might not be arriving - check that the pipeline is running
-   
-   e. **Verify fields are extracted**: After step (d), you should see all the JSON fields displayed in the table:
-      - `hotspot_number`, `vehicle_count`, `centroid_x`, `centroid_y`
-      - `avg_distance_px`, `max_distance_px`, `vehicle_ids`
-      - `avg_parked_duration_sec`, `avg_parked_frames`
-   
-   > **Still only seeing "Time"?** This means the JSON extraction didn't work:
-   > - Remove the "Extract fields" transformation
-   > - Look at the data preview at the bottom - what fields do you see?
-   > - Take a screenshot or note the field names
-   > - Add "Extract fields" again and try each available field in the Source dropdown until you see the JSON data expand
-   
-   f. **(Optional)** Hide unwanted fields like `timestamp`:
-      - Add transformation: **"Organize fields by name"**
-      - Click the eye icon next to any field you want to hide
-   
-   g. The table will automatically display all extracted fields with their original names
-
-5. **Panel Settings**:
-   - **Title**: "Parking Hotspot Analytics"
-   - **Show header**: ✅ Enabled (in panel options on the right side)
-   
-   > **To set panel title**: Look for "Panel options" section on the right sidebar, enter title in "Title" field
-
-> **Real-Time Streaming Behavior**: 
-> - Messages appear **immediately** as they're published to MQTT
-> - The table **updates live** during pipeline execution (not waiting until the end)
-> - Each hotspot detection creates a new row in the table
-> - With 5s auto-refresh, you'll see new rows appearing continuously as the video processes
+4. **Configure Time Window and Refresh** (for real-time display):
+   - **Time Range** (top-right corner): Set to **"Last 10 seconds"**
+   - **Auto-refresh**: Select **"5s"** from dropdown
+   - **Query Options** (in Query tab):
+     - Leave **"Max data points"** empty or set to **0** (unlimited)
+     - ⚠️ **Important**: Do NOT set "Max data points" to a small number (e.g., 3) as this limits MQTT messages, not unique hotspots, causing duplicate rows
+   - **Panel Title**: "Parking Hotspot Analytics"
+   - Click **Save**
 
 #### **Expected Table Display**
 
-The Grafana table will display live hotspot data with the following columns (using original field names):
+The table will show live hotspot data with auto-refresh, displaying only unique hotspots:
 
 ```
-┌────────────────┬──────────────┬────────────┬────────────┬────────────────┬────────────────┬─────────────┬────────────────────────┬──────────────────┐
-│ hotspot_number │ vehicle_count│ centroid_x │ centroid_y │ avg_distance_px│ max_distance_px│ vehicle_ids │ avg_parked_duration_sec│ avg_parked_frames│
-├────────────────┼──────────────┼────────────┼────────────┼────────────────┼────────────────┼─────────────┼────────────────────────┼──────────────────┤
-│       1        │      2       │    783     │    644     │      95        │      95        │   1, 6      │          10            │       307        │
-│       2        │      2       │   1288     │    704     │     150        │     150        │  38, 64     │          19            │        75        │
-└────────────────┴──────────────┴────────────┴────────────┴────────────────┴────────────────┴─────────────┴────────────────────────┴──────────────────┘
+┌──────────┬──────────┬────────────┬────────────┬─────────────────┬─────────────────┬─────────────┬─────────────────────┬──────────────────┐
+│ Hotspot #│ Vehicles │ Location X │ Location Y │ Avg Distance(px)│ Max Distance(px)│ Vehicle IDs │ Parked Duration (s) │ Parked Frames    │
+├──────────┼──────────┼────────────┼────────────┼─────────────────┼─────────────────┼─────────────┼─────────────────────┼──────────────────┤
+│    1     │    2     │    783     │    644     │      132        │      132        │   1, 6      │         20          │       611        │
+│    2     │    3     │    450     │    300     │      118        │      140        │  3, 7, 9    │         15          │       450        │
+└──────────┴──────────┴────────────┴────────────┴─────────────────┴─────────────────┴─────────────┴─────────────────────┴──────────────────┘
 ```
 
-**Table auto-updates every 5 seconds** with new hotspot data from MQTT!
+**Key Behaviors**:
+- ✅ **1 hotspot detected** → 1 row in table (no duplicates)
+- ✅ **2 hotspots detected** → 2 rows in table
+- ✅ **3+ hotspots detected** → All hotspots shown (not limited to 3)
+- ✅ **No duplicates**: Each hotspot_id appears only once due to "Group by" transformation
+- ✅ **Real-time updates**: Table refreshes every 5 seconds showing current state
+- ✅ **Auto-cleanup**: Hotspots that disappear are removed after 10 seconds
 
-#### **Complete Dashboard Layout**
+**How the Transformations Work Together**:
+1. **Extract fields**: Parses JSON and expands array into individual columns
+2. **Sort by Time (Descending)**: Orders messages so newest data appears first
+3. **Group by hotspot_id**: Collapses duplicate hotspot_ids, keeping only the "Last" (most recent) value
+4. **Result**: Each unique hotspot appears once with its latest data
 
-```
-┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Parking Hotspot Analytics Dashboard                                                                    │
-├────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ Hotspot Details (Live Table - Auto-updating every 5s)                                                 │
-├────────────────┬──────────────┬────────────┬────────────┬────────────────┬────────────────┬───────────┬────────────────────────┬──────────────────┐
-│ hotspot_number │ vehicle_count│ centroid_x │ centroid_y │ avg_distance_px│ max_distance_px│vehicle_ids│ avg_parked_duration_sec│ avg_parked_frames│
-├────────────────┼──────────────┼────────────┼────────────┼────────────────┼────────────────┼───────────┼────────────────────────┼──────────────────┤
-│       1        │      2       │    783     │    644     │      95        │      95        │   1, 6    │          10            │       307        │
-│       2        │      2       │   1288     │    704     │     150        │     150        │  38, 64   │          19            │        75        │
-└────────────────┴──────────────┴────────────┴────────────┴────────────────┴────────────────┴───────────┴────────────────────────┴──────────────────┘
-```
-
-#### **Understanding Your Hotspot Data in Grafana**
-
-Based on your example output, here's how it appears in the Grafana table:
-
-**Your Hotspot Detection Results:**
-
-**Hotspot 1:**
-- Location: Cars at positions (734.5, 688.5) and (831.5, 598.5)
-- Vehicles: ID 1 and ID 6
-- Hotspot Length: 2 cars
-- Parked Duration: Car 1 (~0.4s / 11 frames), Car 6 (~20s / 604 frames)
-
-**Hotspot 2:**
-- Location: Cars at positions (1213, 704) and (1363, 704)
-- Vehicles: ID 38 and ID 64
-- Hotspot Length: 2 cars
-- Parked Duration: Both ~19-20 seconds (75 frames @ 30fps)
-
-**Grafana Table Display:**
-```
-┌────────────────┬──────────────┬────────────┬────────────┬────────────────┬────────────────┬─────────────┬────────────────────────┬──────────────────┐
-│ hotspot_number │ vehicle_count│ centroid_x │ centroid_y │ avg_distance_px│ max_distance_px│ vehicle_ids │ avg_parked_duration_sec│ avg_parked_frames│
-├────────────────┼──────────────┼────────────┼────────────┼────────────────┼────────────────┼─────────────┼────────────────────────┼──────────────────┤
-│       1        │      2       │    783     │    644     │      95        │      95        │   1, 6      │          10            │       307        │
-│       2        │      2       │   1288     │    704     │     150        │     150        │  38, 64     │          19            │        75        │
-└────────────────┴──────────────┴────────────┴────────────┴────────────────┴────────────────┴─────────────┴────────────────────────┴──────────────────┘
-```
-
-**What This Shows:**
-- **Hotspot 1**: 2 cars (IDs 1, 6) have been parked for an average of ~10 seconds (~307 frames combined / 2 cars)
-  - Car 1: 11 frames (~0.4s) - just arrived
-  - Car 6: 604 frames (~20s) - been there much longer!
-- **Hotspot 2**: 2 cars (IDs 38, 64) have been parked for ~19 seconds (75 frames each)
-
-**Summary Stats (Above Table):**
-- **Total Hotspots**: 2
-- **Total Parked Vehicles**: 4 (out of 6 detected)
-- **Largest Hotspot**: 2 vehicles
-
-The table **automatically updates** every time new hotspot data is published via MQTT, giving you real-time visibility into parking patterns.
+**Troubleshooting**:
+- **No data appearing**: Verify Node-RED flow is deployed and pipeline is running
+- **Only seeing "Time" and "Value" columns**: You need to add the **Extract fields** transformation (Source: "Value", Format: "Auto")
+- **Value column shows JSON text**: This is correct - add Extract fields transformation to parse it
+- **Columns still not expanding**: Make sure "Replace all fields" is checked in Extract fields transformation
+- **Array showing as text in one cell**: The Extract fields transformation will fix this - select Source as "Value" and Format as "Auto"
+- **Same hotspot appearing multiple times**: Add the **"Sort by"** and **"Group by hotspot_id"** transformations to deduplicate
+- **Set "Max data points" to 3 but seeing duplicates**: Remove "Max data points" setting - it limits MQTT messages (not unique hotspots), use "Group by" transformation instead
+- **Multiple hotspots not showing when expected**: Check time window is at least 10 seconds and "Max data points" is not set to a low number
+- **Only 1 row shown when 3 hotspots exist**: Verify all transformations are applied in correct order: Extract fields → Sort by → Group by
 
 ### Additional Enhancements
 
