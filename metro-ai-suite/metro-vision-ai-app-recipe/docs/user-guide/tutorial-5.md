@@ -284,6 +284,10 @@ if (!context.vehicleHistory) {
     context.vehicleHistory = {};
 }
 
+if (!context.previousHotspots) {
+    context.previousHotspots = {};  // NEW: Track previous hotspots
+}
+
 if (!msg.payload || !msg.payload.vehicles || msg.payload.vehicles.length === 0) {
     // No vehicles detected
     msg.payload = {
@@ -299,17 +303,33 @@ let vehicles = msg.payload.vehicles;
 let currentTimestamp = msg.payload.timestamp;
 
 // Configuration parameters
-const DISTANCE_THRESHOLD = 150;        // pixels - maximum distance between parked cars to form a hotspot
-const MIN_HOTSPOT_SIZE = 2;            // minimum vehicles to form a hotspot
-const PARKED_THRESHOLD = 10;           // pixels - maximum movement to be considered parked
-const PARKED_FRAMES_REQUIRED = 120;     // number of frames vehicle must be stationary to be considered parked
-const HISTORY_TIMEOUT = 5000;          // ms - remove vehicle from history after this time
+const DISTANCE_THRESHOLD = 150;
+const MIN_HOTSPOT_SIZE = 2;
+const PARKED_THRESHOLD = 10;
+const PARKED_FRAMES_REQUIRED = 60;
+const MOVING_FRAMES_GRACE = 20;
+const HISTORY_TIMEOUT = 5000;
+const DISTANCE_MODE = "euclidean";
+const INCLUDE_OVERLAPPING = true;
+const OVERLAP_THRESHOLD = 0.3;
+const HOTSPOT_STABILITY_FRAMES = 30;  // NEW: Hotspot must exist for 30 frames before publishing
 
-// Function to calculate Euclidean distance between two points
-function calculateDistance(pos1, pos2) {
-    let dx = pos1.x - pos2.x;
-    let dy = pos1.y - pos2.y;
-    return Math.sqrt(dx * dx + dy * dy);
+// Function to calculate distance between two points based on selected mode
+function calculateDistance(pos1, pos2, mode = DISTANCE_MODE) {
+    let dx = Math.abs(pos1.x - pos2.x);
+    let dy = Math.abs(pos1.y - pos2.y);
+    
+    switch (mode) {
+        case "horizontal":
+            return dx;
+        case "vertical":
+            return dy;
+        case "manhattan":
+            return dx + dy;
+        case "euclidean":
+        default:
+            return Math.sqrt(dx * dx + dy * dy);
+    }
 }
 
 // Function to calculate bounding box overlap (IoU)
@@ -341,7 +361,7 @@ for (let id of historyIds) {
 let parkedVehicles = [];
 
 for (let vehicle of vehicles) {
-    let vehicleId = vehicle.id; // <-- This ID comes from gvatrack!
+    let vehicleId = vehicle.id;
 
     if (!context.vehicleHistory[vehicleId]) {
         // New vehicle detected
@@ -351,6 +371,7 @@ for (let vehicle of vehicles) {
             firstSeen: currentTimestamp,
             lastSeen: currentTimestamp,
             stationaryFrames: 0,
+            movingFrames: 0,
             isParked: false
         };
     } else {
@@ -367,21 +388,24 @@ for (let vehicle of vehicles) {
 
         history.lastSeen = currentTimestamp;
 
-        // Check if vehicle is stationary
+        // Check if vehicle is stationary WITH GRACE PERIOD
         if (movement <= PARKED_THRESHOLD) {
             history.stationaryFrames++;
+            history.movingFrames = 0;
         } else {
-            history.stationaryFrames = 0; // Reset if vehicle moved
-            history.isParked = false;
+            history.movingFrames = (history.movingFrames || 0) + 1;
+            
+            if (history.movingFrames >= MOVING_FRAMES_GRACE) {
+                history.stationaryFrames = 0;
+                history.isParked = false;
+            }
         }
 
-        // Mark as parked if stationary for required frames
         if (history.stationaryFrames >= PARKED_FRAMES_REQUIRED) {
             history.isParked = true;
         }
     }
 
-    // Add to parked vehicles list if confirmed parked
     if (context.vehicleHistory[vehicleId].isParked) {
         parkedVehicles.push({
             ...vehicle,
@@ -424,12 +448,14 @@ for (let i = 0; i < parkedVehicles.length; i++) {
 
             if (distance <= DISTANCE_THRESHOLD) {
                 let overlap = calculateBBoxOverlap(parkedVehicles[i].bbox, parkedVehicles[j].bbox);
+                let willBeInSameHotspot = INCLUDE_OVERLAPPING ? true : (overlap < OVERLAP_THRESHOLD);
+                
                 proximityPairs.push({
                     vehicle1_id: parkedVehicles[i].id,
                     vehicle2_id: parkedVehicles[j].id,
                     distance: Math.round(distance * 100) / 100,
                     overlap: Math.round(overlap * 1000) / 1000,
-                    is_hotspot_pair: distance <= DISTANCE_THRESHOLD && overlap < 0.3
+                    is_hotspot_pair: willBeInSameHotspot
                 });
             }
         }
@@ -446,9 +472,13 @@ function findHotspot(vehicleIndex, currentHotspot) {
 
     for (let j = 0; j < parkedVehicles.length; j++) {
         if (!visited[j] && distanceMatrix[vehicleIndex][j] <= DISTANCE_THRESHOLD) {
-            let overlap = calculateBBoxOverlap(parkedVehicles[vehicleIndex].bbox, parkedVehicles[j].bbox);
-            if (overlap < 0.3) {
+            if (INCLUDE_OVERLAPPING) {
                 findHotspot(j, currentHotspot);
+            } else {
+                let overlap = calculateBBoxOverlap(parkedVehicles[vehicleIndex].bbox, parkedVehicles[j].bbox);
+                if (overlap < OVERLAP_THRESHOLD) {
+                    findHotspot(j, currentHotspot);
+                }
             }
         }
     }
@@ -478,7 +508,6 @@ for (let i = 0; i < parkedVehicles.length; i++) {
             let avgDistance = distances.length > 0 ?
                 distances.reduce((sum, d) => sum + d, 0) / distances.length : 0;
             let maxDistance = distances.length > 0 ? Math.max(...distances) : 0;
-            let minDistance = distances.length > 0 ? Math.min(...distances) : 0;
 
             // Calculate hotspot bounding box
             let minX = Math.min(...hotspotVehicles.map(v => v.bbox.x));
@@ -494,13 +523,13 @@ for (let i = 0; i < parkedVehicles.length; i++) {
             let density = hotspotVehicles.length / (hotspotArea || 1);
 
             // Generate persistent hotspot ID based on vehicle IDs
-            // Vehicles with same IDs get same hotspot ID across frames
-            let vehicleIdSet = hotspotVehicles.map(v => v.id).sort().join('_');
-            let hotspotId = `hotspot_${vehicleIdSet}`;
+            let vehicleIdSet = hotspotVehicles.map(v => v.id).sort((a,b) => a-b).join('_');
+            let hotspotId = "hotspot_" + vehicleIdSet;
 
             hotspots.push({
                 id: hotspotId,
                 vehicle_count: hotspotVehicles.length,
+                vehicle_ids: vehicleIdSet,
                 vehicles: hotspotVehicles.map(v => ({
                     id: v.id,
                     type: v.type,
@@ -525,13 +554,58 @@ for (let i = 0; i < parkedVehicles.length; i++) {
     }
 }
 
+// ==================== NEW: HOTSPOT STABILITY TRACKING ====================
+let currentHotspotIds = new Set();
+let stableHotspotsToPublish = [];
+
+hotspots.forEach(hotspot => {
+    let hotspotKey = hotspot.vehicle_ids;
+    currentHotspotIds.add(hotspotKey);
+    
+    if (!context.previousHotspots[hotspotKey]) {
+        // New hotspot detected
+        context.previousHotspots[hotspotKey] = {
+            firstSeen: currentTimestamp,
+            frameCount: 1,
+            published: false,
+            data: hotspot
+        };
+    } else {
+        // Existing hotspot - increment frame count
+        context.previousHotspots[hotspotKey].frameCount++;
+        context.previousHotspots[hotspotKey].data = hotspot;  // Update with latest data
+    }
+    
+    // Only publish stable hotspots (existed for HOTSPOT_STABILITY_FRAMES)
+    if (context.previousHotspots[hotspotKey].frameCount >= HOTSPOT_STABILITY_FRAMES) {
+        stableHotspotsToPublish.push(hotspot);
+        
+        if (!context.previousHotspots[hotspotKey].published) {
+            context.previousHotspots[hotspotKey].published = true;
+            node.warn("NEW STABLE HOTSPOT: [" + hotspot.vehicle_ids.replace(/_/g, ", ") + "]");
+        }
+    }
+});
+
+// Clean up disappeared hotspots
+for (let key in context.previousHotspots) {
+    if (!currentHotspotIds.has(key)) {
+        // Hotspot no longer exists
+        if (context.previousHotspots[key].published) {
+            node.warn("HOTSPOT ENDED: [" + key.replace(/_/g, ", ") + "]");
+        }
+        delete context.previousHotspots[key];
+    }
+}
+// =========================================================================
+
 // Create output with hotspot analytics
 msg.payload = {
     ...msg.payload,
     total_vehicles: vehicles.length,
     parked_vehicles_count: parkedVehicles.length,
-    hotspot_count: hotspots.length,
-    hotspots: hotspots,
+    hotspot_count: stableHotspotsToPublish.length,  // Only stable hotspots
+    hotspots: stableHotspotsToPublish,              // Only stable hotspots
     parked_vehicles: parkedVehicles.map(v => ({
         id: v.id,
         type: v.type,
@@ -541,6 +615,9 @@ msg.payload = {
     })),
     proximity_pairs: proximityPairs.filter(pair => pair.is_hotspot_pair),
     distance_threshold: DISTANCE_THRESHOLD,
+    distance_mode: DISTANCE_MODE,
+    include_overlapping: INCLUDE_OVERLAPPING,
+    overlap_threshold: OVERLAP_THRESHOLD,
     parked_threshold: PARKED_THRESHOLD
 };
 
@@ -751,11 +828,51 @@ The system uses configurable parameters for parked vehicle hotspot detection:
 | **Parameter** | **Default Value** | **Description** |
 |---------------|------------------|-----------------|
 | `DISTANCE_THRESHOLD` | 150 pixels | Maximum distance between parked vehicles to be considered part of a hotspot |
+| `DISTANCE_MODE` | "euclidean" | Distance calculation mode: "euclidean" (diagonal), "horizontal" (side-by-side), "vertical" (front-to-back), "manhattan" (sum of both) |
 | `MIN_HOTSPOT_SIZE` | 2 vehicles | Minimum number of parked vehicles required to form a hotspot |
 | `PARKED_THRESHOLD` | 10 pixels | Maximum movement allowed for a vehicle to be considered parked (stationary) |
-| `PARKED_FRAMES_REQUIRED` | 10 frames | Number of consecutive frames a vehicle must be stationary to be confirmed as parked |
-| `OVERLAP_THRESHOLD` | 0.3 | Maximum bounding box overlap (IoU) before considering detections as duplicates |
+| `PARKED_FRAMES_REQUIRED` | 120 frames | Number of consecutive frames a vehicle must be stationary to be confirmed as parked |
+| `INCLUDE_OVERLAPPING` | false | Whether to include overlapping bounding boxes in the same hotspot (true) or exclude them as duplicates (false) |
+| `OVERLAP_THRESHOLD` | 0.3 | Maximum bounding box overlap (IoU) before considering detections as duplicates (only used when INCLUDE_OVERLAPPING=false) |
 | `HISTORY_TIMEOUT` | 5000 ms | Time before removing a vehicle from tracking history if not detected |
+
+### Distance Mode Explanation
+
+**Choosing the right distance mode for your parking lot layout**:
+
+- **"euclidean"** (default): Diagonal distance considering both horizontal and vertical spacing equally
+  - Use for: General-purpose hotspot detection, diagonal parking layouts
+  - Formula: `sqrt(dx² + dy²)`
+  - Example: 150px threshold allows vehicles within a 150px radius
+
+- **"horizontal"**: Only considers side-by-side distance (ignores vertical spacing)
+  - Use for: Parking lots with horizontal rows where vertical distance doesn't matter
+  - Formula: `|x1 - x2|`
+  - Example: 150px threshold allows vehicles up to 150px apart horizontally, regardless of vertical position
+
+- **"vertical"**: Only considers front-to-back distance (ignores horizontal spacing)
+  - Use for: Parking lots with vertical columns where horizontal distance doesn't matter
+  - Formula: `|y1 - y2|`
+  - Example: 150px threshold allows vehicles up to 150px apart vertically, regardless of horizontal position
+
+- **"manhattan"**: Sum of horizontal and vertical distances
+  - Use for: Grid-based parking layouts where both dimensions matter but not equally as euclidean
+  - Formula: `|dx| + |dy|`
+  - Example: 150px threshold allows vehicles where combined horizontal + vertical distance ≤ 150px
+
+### Overlap Handling Explanation
+
+**Controlling how overlapping bounding boxes are treated**:
+
+- **INCLUDE_OVERLAPPING = false** (default): Excludes overlapping vehicles from same hotspot
+  - Prevents duplicate detections or occluded vehicles from inflating hotspot counts
+  - Vehicles with IoU > OVERLAP_THRESHOLD (0.3) are treated as separate
+  - Recommended for: Most scenarios to avoid false positives from detection errors
+
+- **INCLUDE_OVERLAPPING = true**: Includes all vehicles within distance threshold
+  - Allows overlapping bounding boxes to be part of the same hotspot
+  - Useful when tight parking or partial occlusion is expected
+  - Recommended for: Dense parking scenarios where overlap is legitimate
 
 These parameters can be adjusted in the hotspot detection function based on:
 - **Camera frame rate**: Higher FPS may require more `PARKED_FRAMES_REQUIRED`
