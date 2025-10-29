@@ -52,11 +52,11 @@ env:
   # Weld Data Simulator config
   TS_TOPIC: weld-data
   SIMULATION_TARGET_FPS: 10
-  # DL Streamer Pipeline Server
+
+  ## DL Streamer Pipeline Server
+  # HOST_IP is the IP address of server where DLStreamer Pipeline Server is running
   HOST_IP: 
   REST_SERVER_PORT: 8080
-
-  # DL Streamer Pipeline Server
   RTSP_CAMERA_IP: mediamtx
 
   # Open Telemetry related config
@@ -87,7 +87,7 @@ images:
   opcua_server_image: intel/ia-opcua-server:1.0.0
   mqtt_publisher_image: intel/ia-mqtt-publisher:1.1.0
   weld_data_simulator_image: intel/ia-weld-data-simulator:1.0.0
-  dlstreamer_pipeline_server: intel/dlstreamer-pipeline-server:3.1.0-ubuntu22
+  dlstreamer_pipeline_server: intel/dlstreamer-pipeline-server:3.1.0-ubuntu24
   fusion_analytics_image: intel/ia-multimodal-fusion-analytics:1.0.0
 privileged_access_required: false
 config:
