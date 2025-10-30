@@ -163,7 +163,7 @@ The GStreamer pipeline configuration defines the crowd analytics AI processing w
 
 - **Source**: Accepts video input from parking lot camera feeds or video files
 - **Decode**: Converts video format to raw frames for processing  
-- **gvadetect**: Runs the YOLO11s object detection model (INT8 optimized) on CPU to identify and locate vehicles in each frame
+- **gvadetect**: Runs the YOLO11s object detection model (FP32 optimized) on CPU to identify and locate vehicles in each frame
 - **gvatrack**: Tracks detected vehicles across frames using imageless tracking, assigning persistent IDs to each vehicle without storing frame images
 - **gvametaconvert**: Converts inference results to structured metadata with vehicle positions
 - **gvafpscounter**: Monitors processing performance
@@ -181,7 +181,7 @@ sed -i "s/^HOST_IP=.*/HOST_IP=$(hostname -I | cut -f1 -d' ')/" .env
 
 
 # Create self signed certificate for nginx
-mkdir -p src/nginx/ssl
+mkdir -p crowd-analytics/src/nginx/ssl
 cd crowd-analytics/src/nginx/ssl
 if [ ! -f server.key ] || [ ! -f server.crt ]; then
     echo "Generate self-signed certificate..."
@@ -276,7 +276,7 @@ Access the processed video stream with AI annotations through WebRTC:
 ```bash
 # Open in your web browser (replace <HOST_IP> with your actual IP address)
 # For local testing, typically use localhost or 127.0.0.1
-http://localhost/mediamtx/object_detection_1/
+http://<HOST_IP>/mediamtx/object_detection_1/
 ```
 
 For local testing, you can use: `http://localhost/mediamtx/object_detection_1/`
@@ -340,22 +340,17 @@ For slow processing or high CPU usage:
 - **Adjust inference device**: Change from CPU to GPU if available
 - **Optimize pipeline**: Reduce queue sizes or disable unnecessary features
 
-## Supporting Resources
-
-- [DLStreamer Documentation](https://dlstreamer.github.io/)
-- [Metro AI Solutions](https://github.com/open-edge-platform/edge-ai-suites/tree/main/metro-ai-suite)
-
 -----------------------------------------------
-## Customizing Node-RED Flows for Hotspot Analytics Applications
+## Customizing Node-RED Flows for Crowd Analytics Applications
 
 <!--
-**Sample Description**: This tutorial demonstrates how to customize Node-RED flows to process vehicle detection data and implement hotspot analytics logic, enabling real-time hotspot formation detection and proximity analysis.
+**Sample Description**: This tutorial demonstrates how to customize Node-RED flows to process vehicle detection data and implement crowd analytics logic, enabling real-time crowd formation detection and proximity analysis.
 -->
 
-The following steps guides you through customizing Node-RED flows to implement hotspot analytics logic for vehicle detection data. You'll learn how to connect to MQTT data streams from the crowd analytics pipeline, calculate vehicle proximities using Euclidean distances, detect hotspot formations (clusters of vehicles in close proximity), and create enhanced analytics outputs.
+The following steps guides you through customizing Node-RED flows to implement crowd analytics logic for vehicle detection data. You'll learn how to connect to MQTT data streams from the crowd analytics pipeline, calculate vehicle proximities using Euclidean distances, detect crowd formations (clusters of vehicles in close proximity), and create enhanced analytics outputs.
 
 <!--
-**What You Can Do**: This guide covers the complete workflow for implementing hotspot detection algorithms in Node-RED.
+**What You Can Do**: This guide covers the complete workflow for implementing crowd detection algorithms in Node-RED.
 -->
 
 By following this guide, you will learn how to:
@@ -373,15 +368,15 @@ By following this guide, you will learn how to:
 - Familiarity with MQTT messaging protocol and JSON data structures
 - Web browser access to the Node-RED interface
 
-## Hotspot Analytics Flow Architecture Overview
+## Crowd Analytics Flow Architecture Overview
 
-The custom Node-RED flow implements hotspot detection algorithms:
+The custom Node-RED flow implements crowd detection algorithms:
 - **MQTT Input Node**: Subscribes to vehicle detection data from YOLO11s pipeline
 - **Vehicle Position Extractor**: Parses bounding box coordinates (x, y, w, h format) to calculate centroids
 - **Distance Calculator**: Computes Euclidean distances between all vehicle pairs
-- **Hotspot Detector**: Applies proximity thresholds to identify hotspot formations (2+ vehicles in close proximity)
-- **Analytics Generator**: Creates hotspot metrics, density maps, hotspot length measurements, and alerts
-- **MQTT Output Node**: Publishes hotspot analytics data to visualization systems
+- **Hotspot Detector**: Applies proximity thresholds to identify crowd formations (2+ vehicles in close proximity)
+- **Analytics Generator**: Creates crowd metrics, density maps, crowd length measurements, and alerts
+- **MQTT Output Node**: Publishes crowd analytics data to visualization systems
 
 ## Set up and First Use
 
@@ -621,17 +616,12 @@ Add a function node to calculate inter-vehicle distances and detect hotspots:
 // Tracks vehicle positions across frames to identify stationary (parked) vehicles
 // Calculates hotspots only for parked vehicles
 
-// Initialize persistent storage for tracking vehicles across frames
-if (!context.vehicleHistory) {
-    context.vehicleHistory = {};
-}
+// Initialize persistent storage
+if (!context.vehicleHistory) context.vehicleHistory = {};
+if (!context.previousHotspots) context.previousHotspots = {};
 
-if (!context.previousHotspots) {
-    context.previousHotspots = {};  // NEW: Track previous hotspots
-}
-
+// If no vehicles detected, return early
 if (!msg.payload || !msg.payload.vehicles || msg.payload.vehicles.length === 0) {
-    // No vehicles detected
     msg.payload = {
         ...msg.payload,
         hotspot_count: 0,
@@ -641,123 +631,112 @@ if (!msg.payload || !msg.payload.vehicles || msg.payload.vehicles.length === 0) 
     return msg;
 }
 
+// Extract vehicle list and current timestamp
 let vehicles = msg.payload.vehicles;
 let currentTimestamp = msg.payload.timestamp;
 
 // Configuration parameters
 const DISTANCE_THRESHOLD = 150;
 const MIN_HOTSPOT_SIZE = 2;
-const PARKED_THRESHOLD = 10;
-const PARKED_FRAMES_REQUIRED = 60;
-const MOVING_FRAMES_GRACE = 20;
+const PARKED_THRESHOLD = 150;  // maximum movement (pixels) permitted within the frame-window to consider a vehicle stationary
+const PARKED_FRAMES_REQUIRED = 15; // number of consecutive frames the vehicle must appear stationary before marking as parked
+const MOVING_FRAMES_GRACE = 30;
 const HISTORY_TIMEOUT = 5000;
 const DISTANCE_MODE = "euclidean";
 const INCLUDE_OVERLAPPING = true;
 const OVERLAP_THRESHOLD = 0.3;
-const HOTSPOT_STABILITY_FRAMES = 30;  // NEW: Hotspot must exist for 30 frames before publishing
+const HOTSPOT_STABILITY_FRAMES = 20;
 
-// Function to calculate distance between two points based on selected mode
+// Calculate distance between two positions
 function calculateDistance(pos1, pos2, mode = DISTANCE_MODE) {
     let dx = Math.abs(pos1.x - pos2.x);
     let dy = Math.abs(pos1.y - pos2.y);
-    
     switch (mode) {
-        case "horizontal":
-            return dx;
-        case "vertical":
-            return dy;
-        case "manhattan":
-            return dx + dy;
+        case "horizontal": return dx;
+        case "vertical": return dy;
+        case "manhattan": return dx + dy;
         case "euclidean":
-        default:
-            return Math.sqrt(dx * dx + dy * dy);
+        default: return Math.sqrt(dx * dx + dy * dy);
     }
 }
 
-// Function to calculate bounding box overlap (IoU)
-function calculateBBoxOverlap(bbox1, bbox2) {
-    let xLeft = Math.max(bbox1.x, bbox2.x);
-    let yTop = Math.max(bbox1.y, bbox2.y);
-    let xRight = Math.min(bbox1.x + bbox1.width, bbox2.x + bbox2.width);
-    let yBottom = Math.min(bbox1.y + bbox1.height, bbox2.y + bbox2.height);
-
-    if (xRight < xLeft || yBottom < yTop) {
-        return 0;
-    }
-
+// Calculate intersection over union (IoU) of two bounding boxes
+function calculateBBoxOverlap(b1, b2) {
+    let xLeft = Math.max(b1.x, b2.x);
+    let yTop = Math.max(b1.y, b2.y);
+    let xRight = Math.min(b1.x + b1.width, b2.x + b2.width);
+    let yBottom = Math.min(b1.y + b1.height, b2.y + b2.height);
+    if (xRight < xLeft || yBottom < yTop) return 0;
     let intersectionArea = (xRight - xLeft) * (yBottom - yTop);
-    let union = bbox1.area + bbox2.area - intersectionArea;
-
+    let union = b1.area + b2.area - intersectionArea;
     return intersectionArea / union;
 }
 
-// Clean up old vehicle history
-let historyIds = Object.keys(context.vehicleHistory);
-for (let id of historyIds) {
+// Cleanup old vehicles from history
+for (let id of Object.keys(context.vehicleHistory)) {
     if (currentTimestamp - context.vehicleHistory[id].lastSeen > HISTORY_TIMEOUT) {
         delete context.vehicleHistory[id];
     }
 }
 
-// Update vehicle history and determine parked status
+// Track parked vehicles
 let parkedVehicles = [];
 
 for (let vehicle of vehicles) {
-    let vehicleId = vehicle.id;
+    let id = vehicle.id;
+    let pos = vehicle.position || { x: vehicle.x, y: vehicle.y };
 
-    if (!context.vehicleHistory[vehicleId]) {
-        // New vehicle detected
-        context.vehicleHistory[vehicleId] = {
-            id: vehicleId,
-            positions: [vehicle.position],
+    if (!context.vehicleHistory[id]) {
+        // New vehicle: initialize history
+        context.vehicleHistory[id] = {
+            id,
+            positions: [pos],
             firstSeen: currentTimestamp,
             lastSeen: currentTimestamp,
-            stationaryFrames: 0,
-            movingFrames: 0,
-            isParked: false
+            isParked: false,
+            stationaryFrames: 1,
+            movingFrames: 0
         };
     } else {
-        // Existing vehicle - check if it has moved
-        let history = context.vehicleHistory[vehicleId];
-        let lastPosition = history.positions[history.positions.length - 1];
-        let movement = calculateDistance(vehicle.position, lastPosition);
-
-        // Update position history (keep last 20 positions)
-        history.positions.push(vehicle.position);
-        if (history.positions.length > 20) {
-            history.positions.shift();
-        }
-
+        // Existing vehicle: update history
+        let history = context.vehicleHistory[id];
+        history.positions.push(pos);
         history.lastSeen = currentTimestamp;
 
-        // Check if vehicle is stationary WITH GRACE PERIOD
-        if (movement <= PARKED_THRESHOLD) {
-            history.stationaryFrames++;
-            history.movingFrames = 0;
-        } else {
-            history.movingFrames = (history.movingFrames || 0) + 1;
-            
-            if (history.movingFrames >= MOVING_FRAMES_GRACE) {
+        if (history.positions.length > PARKED_FRAMES_REQUIRED)
+            history.positions.shift();
+
+        let totalFrames = history.positions.length;
+
+        if (totalFrames >= PARKED_FRAMES_REQUIRED) {
+            let firstPos = history.positions[0];
+            let lastPos = history.positions[totalFrames - 1];
+            let totalMovement = calculateDistance(firstPos, lastPos);
+
+            if (totalMovement <= PARKED_THRESHOLD) {
+                history.stationaryFrames++;
+                if (history.stationaryFrames >= PARKED_FRAMES_REQUIRED) {
+                    history.isParked = true;
+                }
+            } else {
                 history.stationaryFrames = 0;
                 history.isParked = false;
+                history.movingFrames++;
             }
-        }
-
-        if (history.stationaryFrames >= PARKED_FRAMES_REQUIRED) {
-            history.isParked = true;
         }
     }
 
-    if (context.vehicleHistory[vehicleId].isParked) {
+    // Add to parked list if currently parked
+    if (context.vehicleHistory[id].isParked) {
         parkedVehicles.push({
             ...vehicle,
-            parked_frames: context.vehicleHistory[vehicleId].stationaryFrames,
-            parked_duration_ms: currentTimestamp - context.vehicleHistory[vehicleId].firstSeen
+            parked_duration_ms: currentTimestamp - context.vehicleHistory[id].firstSeen,
+            parked_frames: context.vehicleHistory[id].stationaryFrames
         });
     }
 }
 
-// Only process hotspots if we have 2+ parked vehicles
+// Skip hotspot computation if not enough parked vehicles
 if (parkedVehicles.length < MIN_HOTSPOT_SIZE) {
     msg.payload = {
         ...msg.payload,
@@ -765,202 +744,140 @@ if (parkedVehicles.length < MIN_HOTSPOT_SIZE) {
         parked_vehicles_count: parkedVehicles.length,
         hotspot_count: 0,
         hotspots: [],
-        parked_vehicles: parkedVehicles.map(v => ({
-            id: v.id,
-            type: v.type,
-            position: v.position,
-            parked_duration_ms: v.parked_duration_ms
-        }))
+        parked_vehicles: parkedVehicles
     };
     return msg;
 }
 
-// Calculate distance matrix between all parked vehicle pairs
+// Compute distance matrix and proximity pairs between parked vehicles
 let distanceMatrix = [];
 let proximityPairs = [];
 
 for (let i = 0; i < parkedVehicles.length; i++) {
     distanceMatrix[i] = [];
     for (let j = 0; j < parkedVehicles.length; j++) {
-        if (i === j) {
-            distanceMatrix[i][j] = 0;
-        } else {
-            let distance = calculateDistance(parkedVehicles[i].position, parkedVehicles[j].position);
-            distanceMatrix[i][j] = distance;
-
-            if (distance <= DISTANCE_THRESHOLD) {
+        if (i === j) distanceMatrix[i][j] = 0;
+        else {
+            let d = calculateDistance(parkedVehicles[i].position, parkedVehicles[j].position);
+            distanceMatrix[i][j] = d;
+            if (d <= DISTANCE_THRESHOLD) {
                 let overlap = calculateBBoxOverlap(parkedVehicles[i].bbox, parkedVehicles[j].bbox);
-                let willBeInSameHotspot = INCLUDE_OVERLAPPING ? true : (overlap < OVERLAP_THRESHOLD);
-                
-                proximityPairs.push({
-                    vehicle1_id: parkedVehicles[i].id,
-                    vehicle2_id: parkedVehicles[j].id,
-                    distance: Math.round(distance * 100) / 100,
-                    overlap: Math.round(overlap * 1000) / 1000,
-                    is_hotspot_pair: willBeInSameHotspot
-                });
+                let isClose = INCLUDE_OVERLAPPING || overlap < OVERLAP_THRESHOLD;
+                if (isClose) {
+                    proximityPairs.push({
+                        vehicle1_id: parkedVehicles[i].id,
+                        vehicle2_id: parkedVehicles[j].id,
+                        distance: Math.round(d * 100) / 100,
+                        overlap: Math.round(overlap * 1000) / 1000
+                    });
+                }
             }
         }
     }
 }
 
-// Cluster parked vehicles into hotspots using connected components
+// Cluster parked vehicles into hotspots
 let visited = new Array(parkedVehicles.length).fill(false);
 let hotspots = [];
 
-function findHotspot(vehicleIndex, currentHotspot) {
-    visited[vehicleIndex] = true;
-    currentHotspot.push(vehicleIndex);
-
+function findHotspot(i, currentHotspot) {
+    // Recursive DFS to find connected parked vehicles
+    visited[i] = true;
+    currentHotspot.push(i);
     for (let j = 0; j < parkedVehicles.length; j++) {
-        if (!visited[j] && distanceMatrix[vehicleIndex][j] <= DISTANCE_THRESHOLD) {
-            if (INCLUDE_OVERLAPPING) {
+        if (!visited[j] && distanceMatrix[i][j] <= DISTANCE_THRESHOLD) {
+            if (INCLUDE_OVERLAPPING || calculateBBoxOverlap(parkedVehicles[i].bbox, parkedVehicles[j].bbox) < OVERLAP_THRESHOLD) {
                 findHotspot(j, currentHotspot);
-            } else {
-                let overlap = calculateBBoxOverlap(parkedVehicles[vehicleIndex].bbox, parkedVehicles[j].bbox);
-                if (overlap < OVERLAP_THRESHOLD) {
-                    findHotspot(j, currentHotspot);
-                }
             }
         }
     }
 }
 
-// Find all hotspots
+// Identify all hotspots
 for (let i = 0; i < parkedVehicles.length; i++) {
     if (!visited[i]) {
-        let hotspot = [];
-        findHotspot(i, hotspot);
+        let cluster = [];
+        findHotspot(i, cluster);
+        if (cluster.length >= MIN_HOTSPOT_SIZE) {
+            let members = cluster.map(idx => parkedVehicles[idx]);
+            let centroidX = members.reduce((sum, v) => sum + v.position.x, 0) / members.length;
+            let centroidY = members.reduce((sum, v) => sum + v.position.y, 0) / members.length;
 
-        if (hotspot.length >= MIN_HOTSPOT_SIZE) {
-            let hotspotVehicles = hotspot.map(idx => parkedVehicles[idx]);
-
-            // Calculate hotspot centroid
-            let centroidX = hotspotVehicles.reduce((sum, v) => sum + v.position.x, 0) / hotspotVehicles.length;
-            let centroidY = hotspotVehicles.reduce((sum, v) => sum + v.position.y, 0) / hotspotVehicles.length;
-
-            // Calculate hotspot length (maximum distance between any two parked vehicles)
-            let distances = [];
-            for (let m = 0; m < hotspot.length; m++) {
-                for (let n = m + 1; n < hotspot.length; n++) {
-                    distances.push(distanceMatrix[hotspot[m]][hotspot[n]]);
-                }
-            }
-
-            let avgDistance = distances.length > 0 ?
-                distances.reduce((sum, d) => sum + d, 0) / distances.length : 0;
-            let maxDistance = distances.length > 0 ? Math.max(...distances) : 0;
-
-            // Calculate hotspot bounding box
-            let minX = Math.min(...hotspotVehicles.map(v => v.bbox.x));
-            let minY = Math.min(...hotspotVehicles.map(v => v.bbox.y));
-            let maxX = Math.max(...hotspotVehicles.map(v => v.bbox.x + v.bbox.width));
-            let maxY = Math.max(...hotspotVehicles.map(v => v.bbox.y + v.bbox.height));
-
+            let minX = Math.min(...members.map(v => v.bbox.x));
+            let minY = Math.min(...members.map(v => v.bbox.y));
+            let maxX = Math.max(...members.map(v => v.bbox.x + v.bbox.width));
+            let maxY = Math.max(...members.map(v => v.bbox.y + v.bbox.height));
             let hotspotWidth = maxX - minX;
             let hotspotHeight = maxY - minY;
 
-            // Calculate hotspot density
-            let hotspotArea = Math.PI * Math.pow(maxDistance / 2, 2);
-            let density = hotspotVehicles.length / (hotspotArea || 1);
+            let maxDistance = 0;
+            for (let m = 0; m < members.length; m++)
+                for (let n = m + 1; n < members.length; n++)
+                    maxDistance = Math.max(maxDistance, distanceMatrix[cluster[m]][cluster[n]]);
 
-            // Generate persistent hotspot ID based on vehicle IDs
-            let vehicleIdSet = hotspotVehicles.map(v => v.id).sort((a,b) => a-b).join('_');
-            let hotspotId = "hotspot_" + vehicleIdSet;
+            let area = Math.PI * Math.pow(maxDistance / 2, 2);
+            let density = members.length / (area || 1);
 
+            let vehicleIds = members.map(v => v.id).sort((a, b) => a - b).join('_');
             hotspots.push({
-                id: hotspotId,
-                vehicle_count: hotspotVehicles.length,
-                vehicle_ids: vehicleIdSet,
-                vehicles: hotspotVehicles.map(v => ({
-                    id: v.id,
-                    type: v.type,
-                    confidence: v.confidence,
-                    parked_duration_ms: v.parked_duration_ms
-                })),
-                centroid: {
-                    x: Math.round(centroidX),
-                    y: Math.round(centroidY)
-                },
-                avg_distance: Math.round(avgDistance * 100) / 100,
-                max_distance: Math.round(maxDistance * 100) / 100,
-                bounding_box: {
-                    x: Math.round(minX),
-                    y: Math.round(minY),
-                    width: Math.round(hotspotWidth),
-                    height: Math.round(hotspotHeight)
-                },
-                density: Math.round(density * 1000) / 1000
+                id: "hotspot_" + vehicleIds,
+                vehicle_count: members.length,
+                vehicle_ids: vehicleIds,
+                centroid: { x: Math.round(centroidX), y: Math.round(centroidY) },
+                bounding_box: { x: Math.round(minX), y: Math.round(minY), width: Math.round(hotspotWidth), height: Math.round(hotspotHeight) },
+                density: Math.round(density * 1000) / 1000,
+                vehicles: members.map(v => ({ id: v.id, type: v.type, parked_duration_ms: v.parked_duration_ms }))
             });
         }
     }
 }
 
-// ==================== NEW: HOTSPOT STABILITY TRACKING ====================
+// Track hotspot stability across frames
 let currentHotspotIds = new Set();
-let stableHotspotsToPublish = [];
+let stableHotspots = [];
 
-hotspots.forEach(hotspot => {
-    let hotspotKey = hotspot.vehicle_ids;
-    currentHotspotIds.add(hotspotKey);
-    
-    if (!context.previousHotspots[hotspotKey]) {
-        // New hotspot detected
-        context.previousHotspots[hotspotKey] = {
-            firstSeen: currentTimestamp,
-            frameCount: 1,
-            published: false,
-            data: hotspot
-        };
+for (let hs of hotspots) {
+    let key = hs.vehicle_ids;
+    currentHotspotIds.add(key);
+
+    if (!context.previousHotspots[key]) {
+        context.previousHotspots[key] = { frameCount: 1, published: false, data: hs };
     } else {
-        // Existing hotspot - increment frame count
-        context.previousHotspots[hotspotKey].frameCount++;
-        context.previousHotspots[hotspotKey].data = hotspot;  // Update with latest data
+        context.previousHotspots[key].frameCount++;
+        context.previousHotspots[key].data = hs;
     }
-    
-    // Only publish stable hotspots (existed for HOTSPOT_STABILITY_FRAMES)
-    if (context.previousHotspots[hotspotKey].frameCount >= HOTSPOT_STABILITY_FRAMES) {
-        stableHotspotsToPublish.push(hotspot);
-        
-        if (!context.previousHotspots[hotspotKey].published) {
-            context.previousHotspots[hotspotKey].published = true;
-            node.warn("NEW STABLE HOTSPOT: [" + hotspot.vehicle_ids.replace(/_/g, ", ") + "]");
+
+    if (context.previousHotspots[key].frameCount >= HOTSPOT_STABILITY_FRAMES) {
+        stableHotspots.push(hs);
+        if (!context.previousHotspots[key].published) {
+            node.warn("NEW STABLE HOTSPOT: [" + key.replace(/_/g, ", ") + "]");
+            context.previousHotspots[key].published = true;
         }
     }
-});
+}
 
-// Clean up disappeared hotspots
+// Remove hotspots that no longer exist
 for (let key in context.previousHotspots) {
     if (!currentHotspotIds.has(key)) {
-        // Hotspot no longer exists
-        if (context.previousHotspots[key].published) {
+        if (context.previousHotspots[key].published)
             node.warn("HOTSPOT ENDED: [" + key.replace(/_/g, ", ") + "]");
-        }
         delete context.previousHotspots[key];
     }
 }
-// =========================================================================
 
-// Create output with hotspot analytics
+// Return final output
 msg.payload = {
     ...msg.payload,
     total_vehicles: vehicles.length,
     parked_vehicles_count: parkedVehicles.length,
-    hotspot_count: stableHotspotsToPublish.length,  // Only stable hotspots
-    hotspots: stableHotspotsToPublish,              // Only stable hotspots
-    parked_vehicles: parkedVehicles.map(v => ({
-        id: v.id,
-        type: v.type,
-        position: v.position,
-        parked_duration_ms: v.parked_duration_ms,
-        parked_frames: v.parked_frames
-    })),
-    proximity_pairs: proximityPairs.filter(pair => pair.is_hotspot_pair),
+    hotspot_count: stableHotspots.length,
+    hotspots: stableHotspots,
+    parked_vehicles: parkedVehicles,
+    proximity_pairs: proximityPairs,
     distance_threshold: DISTANCE_THRESHOLD,
     distance_mode: DISTANCE_MODE,
-    include_overlapping: INCLUDE_OVERLAPPING,
-    overlap_threshold: OVERLAP_THRESHOLD,
-    parked_threshold: PARKED_THRESHOLD
+    parked_threshold: PARKED_THRESHOLD,
+    parked_frames_required: PARKED_FRAMES_REQUIRED
 };
 
 return msg;
@@ -981,7 +898,6 @@ Create a function node to generate hotspot analytics summaries and alerts:
 
 ```javascript
 // Generate Hotspot Analytics for PARKED Vehicles
-// Output: Simple table-friendly format for Grafana
 
 if (!msg.payload || !msg.payload.hotspots) {
     return null;
@@ -1020,7 +936,7 @@ let tableData = hotspots.map((hotspot, index) => {
         centroid_y: Math.round(hotspot.centroid.y),
         avg_distance_px: Math.round(hotspot.avg_distance),
         max_distance_px: Math.round(hotspot.max_distance),
-        vehicle_ids: vehicleIds.join(', '),
+        vehicle_ids: hotspot.vehicle_ids.replace(/_/g, ', '),
         avg_parked_duration_sec: avgDurationSec,
         avg_parked_frames: avgFrames
     };
@@ -1077,42 +993,19 @@ Test your complete crowd analytics Node-RED flow:
 2. **Monitor Crowd Analytics**:
    - Open the debug panel in Node-RED
    - Start the crowd analytics pipeline using the curl command from step 4
-   - Verify that vehicle detection data flows through each stage
-   - Check that hotspot detection algorithms are working correctly
-   - Monitor hotspot analytics outputs in real-time
-
-3. **Validate Hotspot Detection Logic**:
-   - Test with different video sources containing various vehicle densities
-   - Verify distance calculations are accurate
-   - Check that hotspots are properly identified
-   - Validate alert generation for different congestion scenarios
+   - Verify that vehicle detection data flows through each stagAfter successfully implementing vehicle crowd detection with Node-RED, follow the following steps to set up Grafana dashboards for visualizing the parked vehicle hotspot data and analytics. This will allow you to monitor stationary vehicle clusters and parking hotspot formations in real-time, providing valuable insights for parking space management. identified
+   - VCrowd alert generation for diffecrowdngestion scenarios
    - Review hotspot length calculations in the output
 
 ## Expected Results
 
-![Hotspot Analytics Node-RED Flow](_images/crowd-analytics-node-red-flow.png)
+![Crowd Analytics Node-RED Flow](_images/crowd-analytics-node-red-flow.png)
 
 After completing this tutorial, you should have:
 
 1. **Complete Hotspot Analytics Flow**: A working Node-RED flow that tracks parked vehicles and detects hotspot formations
 2. **Parked Vehicle Detection**: Automatic identification of stationary (parked) vehicles by tracking position across frames
-3. **Real-time Hotspot Detection**: Live identification of parking hotspots (2+ parked vehicles within 150 pixels)
-4. **Single MQTT Topic**: Clean, table-ready data published to `hotspot_analytics` for easy Grafana visualization
-5. **Enhanced Analytics**: Per-hotspot metrics including:
-   - Vehicle count per hotspot
-   - Location coordinates (centroid)
-   - Distance metrics between parked vehicles
-   - Vehicle tracking IDs
-   - Overall summary statistics (total vehicles, parked count, hotspot count)
-
-
-## Troubleshooting
-
-### **Node-RED Interface Not Accessible**
-- **Problem**: Cannot access Node-RED at the specified URL
-- **Solution**: 
-  ```bash
-  # Check if Node-RED container is running
+3. **Real-time Hotspot Det  # aheck if Node-RED container is running
   docker ps | grep node-red
   # Restart the metro vision AI application if needed
   ./sample_stop.sh && ./sample_start.sh
@@ -1122,7 +1015,7 @@ After completing this tutorial, you should have:
 - **Problem**: Debug nodes show no incoming data
 - **Solution**: 
   - Verify the AI application is running and generating inference data
-  - Check MQTT topic names match your application's output topics
+  - Cbeck MQTT topic names match your application's output topics
   - Ensure proper JSON parsing in function nodes
 
 ### **Function Node Errors**
@@ -1132,15 +1025,9 @@ After completing this tutorial, you should have:
   - Use `node.warn()` or `node.error()` for debugging
   - Validate input data structure before processing
 
-## Supporting Resources
-
-- [Node-RED Official Documentation](https://nodered.org/docs/)
-- [MQTT Protocol Specification](https://mqtt.org/)
-- [Intel DLStreamer Documentation](https://dlstreamer.github.io/)
-- [Metro AI Solutions](https://github.com/open-edge-platform/edge-ai-suites/tree/main/metro-ai-suite)
 -----------------------------
 
-After successfully implementing hotspot analytics with Node-RED, follow the follwing steps to set up Grafana dashboards for visualizing the hotspot data and metrics. This will allow you to monitor vehicle congestion and hotspot formations in real-time, providing valuable insights for traffic management and urban planning.
+After successfully implementing hotspot analytics with Node-RED, follow the follwing steps tocset up Grafana dashboards for visualizing the hotspot data and metrics. This will allow you to monitor vehicle congestion and hotspot formations in real-time, providing valuable insights for traffic management and urban planning.
 
 ### Visualizing Hotspot Analytics in Grafana
 
@@ -1151,25 +1038,46 @@ The hotspot analytics data published to `hotspot_analytics` can be visualized in
 1. **Access Grafana**: Navigate to `https://localhost/grafana` (Username: `admin`, Password: `admin`)
 
 2. **Create New Dashboard**:
-   - Click "+" → "New Dashboard" → "Add Visualization"
-   - Select **Table** visualization type
-   - Set Data Source to **grafana-mqtt-datasource**
-   - Set Topic to **hotspot_analytics**
+   - Click the "+" icon in the right sidebar
+   - Select "New Dashboard" from the top right menu
+   - Click "Add Visualization"
 
-3. **Add Transformations** (Transform tab at bottom):
-   
-   **What you'll see initially**: Two columns - "Time" and "Value" (Value contains the JSON array as text)
-   
-   a. **Extract fields** :
-      - Click **"+ Add transformation"** → Select **"Extract fields"**
-      - **Source**: Select **"Value"** (with capital V - this column contains the JSON array)
-      - **Format**: Select **"Auto"** (automatically detects and parses JSON array)
-      - **Replace all fields**: ✅ **Check this box** (replaces Time/Value with expanded fields)
-      - Click **Apply**
-      
-      **Result**: The JSON array will expand into individual columns (hotspot_number, vehicle_count, etc.)
-   
-   b. **Sort by** (CRITICAL - orders data by time for deduplication):
+### 2. **Add Real-Time Video Stream Panel**
+
+1. **Create HTML Panel for Live Feed**:
+   - In the panel editor, change the visualization type to "Text" (On Right side of Visualization Editor)
+   - Switch to "HTML" mode
+   - Add the following iframe code:
+   - In the below code update <HOST_IP> to your host IP address. If you are testing on localhost, update it to localhost.
+
+   ```html
+   <iframe 
+     src="http://<HOST_IP>/mediamtx/object_detection_1/" 
+     style="width:100%;height:500px;" 
+     allow="autoplay; encrypted-media"
+     frameborder="0">
+   </iframe>
+   ```
+
+2. **Configure Video Panel Settings**:
+   - Set panel title to "Live Vehicle Crowd Detection Feed"
+   - Click "Apply" to save the panel
+   - Adjust panel size as needed
+
+### 3. **Create Crowd Analytics Data Table**
+
+1. **Add New Panel**:
+   - Click "Add Visualization" to create another visualization
+   - Select "Table" as the visualization type (On Right side of Visualization Editor)
+   - Set panel title to "Real-time Vehicle Hotspot Analytics"
+
+2. **Configure Data Source**:
+   - Set your MQTT data source as "grafana-mqtt-datasource"
+   - Configure topic to fetch hotspot analytics data
+   - Update Topic to "hotspot_analytics"
+
+3. **Add Transformations** (Transform tab at bottom):   
+   a. **Sort by**:
       - Click **"+ Add transformation"** → Select **"Sort by"**
       - **Field**: Select **"Time"**
       - **Order**: Select **Descending** (newest first)
@@ -1177,7 +1085,7 @@ The hotspot analytics data published to `hotspot_analytics` can be visualized in
       
       **Purpose**: Ensures the most recent data for each hotspot appears first
    
-   c. **Group by** (CRITICAL - removes duplicate hotspots):
+   b. **Group by**:
       - Click **"+ Add transformation"** → Select **"Group by"**
       - **Group by**: Select **"hotspot_id"**
       - **Calculations** (configure for each field):
@@ -1192,42 +1100,34 @@ The hotspot analytics data published to `hotspot_analytics` can be visualized in
         - `avg_parked_duration_sec`: Select **"Last"**
         - `avg_parked_frames`: Select **"Last"**
       - Click **Apply**
-      
-      **Result**: Each unique hotspot_id appears only once with its most recent data
-   
-   d. **Organize fields** (Optional - for better column names):
-      - Click **"+ Add transformation"** → Select **"Organize fields by name"**
-      - Rename fields for display:
-        - `hotspot_number` → "Hotspot #"
-        - `vehicle_count` → "Vehicles"
-        - `centroid_x` → "Location X"
-        - `centroid_y` → "Location Y"
-        - `avg_distance_px` → "Avg Distance (px)"
-        - `max_distance_px` → "Max Distance (px)"
-        - `vehicle_ids` → "Vehicle IDs"
-        - `avg_parked_duration_sec` → "Parked Duration (s)"
-        - `avg_parked_frames` → "Parked Frames"
-      - Hide unwanted fields (timestamp, hotspot_id) by clicking the eye icon
+
+    You can add more transformations as needed for additional fields.
 
 4. **Configure Time Window and Refresh** (for real-time display):
-   - **Time Range** (top-right corner): Set to **"Last 10 seconds"**
+   - **Time Range** (top-right corner): Set to **"Last 5 seconds"**
    - **Auto-refresh**: Select **"5s"** from dropdown
-   - **Query Options** (in Query tab):
-     - Leave **"Max data points"** empty or set to **0** (unlimited)
-     - ⚠️ **Important**: Do NOT set "Max data points" to a small number (e.g., 3) as this limits MQTT messages, not unique hotspots, causing duplicate rows
-   - **Panel Title**: "Parking Hotspot Analytics"
+   - **Panel Title**: "Parking Crowd Analytics"
    - Click **Save**
+
+5. **Save Dashboard**
+   - Click the save icon at the top of the dashboard
+   - Name your dashboard "Vehicle Crowd Analytics Dashboard"
+
+## Expected Results
+
+![Crowd Analytics Grafana](_images/crowd-analytics-grafana.png)
+
+After completing this tutorial, you should have:
+
+- **Interactive Dashboard**: A custom Grafana dashboard displaying real-time video and data
+- **Live Video Feed**: WebRTC stream showing object detection overlay
+- **Dynamic Data Table**: Real-time MQTT data updates with detection information
+- **Integrated Monitoring**: Combined visual and analytical view of the crowd detection
 
 **Troubleshooting**:
 - **No data appearing**: Verify Node-RED flow is deployed and pipeline is running
-- **Only seeing "Time" and "Value" columns**: You need to add the **Extract fields** transformation (Source: "Value", Format: "Auto")
-- **Value column shows JSON text**: This is correct - add Extract fields transformation to parse it
-- **Columns still not expanding**: Make sure "Replace all fields" is checked in Extract fields transformation
-- **Array showing as text in one cell**: The Extract fields transformation will fix this - select Source as "Value" and Format as "Auto"
 - **Same hotspot appearing multiple times**: Add the **"Sort by"** and **"Group by hotspot_id"** transformations to deduplicate
-- **Set "Max data points" to 3 but seeing duplicates**: Remove "Max data points" setting - it limits MQTT messages (not unique hotspots), use "Group by" transformation instead
-- **Multiple hotspots not showing when expected**: Check time window is at least 10 seconds and "Max data points" is not set to a low number
-- **Only 1 row shown when 3 hotspots exist**: Verify all transformations are applied in correct order: Extract fields → Sort by → Group by
+- **Only 1 row shown when 3 hotspots exist**: Verify all transformations are applied in correct order: Sort by → Group by
 
 
 ## Troubleshooting
@@ -1243,7 +1143,7 @@ The hotspot analytics data published to `hotspot_analytics` can be visualized in
   ```
 
 ### **Incorrect Distance Calculations**
-- **Problem**: Hotspot detection not working properly
+- **Problem**: Crowd detection not working properly
 - **Solution**: 
   - Verify bounding box coordinates are valid (x, y, w, h format)
   - Check centroid calculations in vehicle position extractor
@@ -1269,14 +1169,14 @@ The hotspot analytics data published to `hotspot_analytics` can be visualized in
 - **Problem**: Hotspot length shows as 0 or undefined
 - **Solution**:
   - Verify that multiple vehicles are detected in the hotspot
-  - Check that Euclidean distance calculations are working
+  - Check that distance_mode used for calculations are working
   - Review the `max_distance` field in hotspot output
   - Ensure distanceMatrix is populated correctly
 
 ## Supporting Resources
 
-- [Node-RED Official Documentation](https://nodered.org/docs/)
-- [Euclidean Distance Algorithms](https://en.wikipedia.org/wiki/Euclidean_distance)
-- [Crowd Dynamics Theory](https://en.wikipedia.org/wiki/Crowd_dynamics)
-- [Intel DLStreamer Documentation](https://dlstreamer.github.io/)
+- [DLStreamer Documentation](https://dlstreamer.github.io/)
 - [Metro AI Solutions](https://github.com/open-edge-platform/edge-ai-suites/tree/main/metro-ai-suite)
+- [Node-RED Official Documentation](https://nodered.org/docs/)
+- [MQTT Protocol Specification](https://mqtt.org/)
+- [Euclidean Distance Algorithms](https://en.wikipedia.org/wiki/Euclidean_distance)
