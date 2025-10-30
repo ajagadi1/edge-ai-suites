@@ -64,13 +64,34 @@ Replace `your-proxy-server:port` with your actual proxy server details.
 The Smart Intersection application requires cert-manager for TLS certificate management. Install cert-manager before deploying the application:
 
 ```bash
-# Install cert-manager
-helm install \
-  cert-manager oci://quay.io/jetstack/charts/cert-manager \
-  --version v1.18.2 \
-  --namespace cert-manager \
-  --create-namespace \
-  --set crds.enabled=true
+# Install cert-manager using YAML manifests (recommended for reliability)
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.18.2/cert-manager.yaml
+
+# Wait for cert-manager to be ready
+kubectl wait --for=condition=Available --timeout=60s deployment/cert-manager -n cert-manager
+kubectl wait --for=condition=Available --timeout=60s deployment/cert-manager-webhook -n cert-manager
+```
+
+### Setup Storage Provisioner (For Single-Node Clusters)
+
+Check if your cluster has a default storage class with dynamic provisioning. If not, install a storage provisioner:
+
+```bash
+# Check for existing storage classes
+kubectl get storageclass
+
+# If no storage classes exist or none are marked as default, install local-path-provisioner
+# This step is typically needed for single-node bare Kubernetes installations
+# (Managed clusters like EKS/GKE/AKS already have storage classes configured)
+
+# Install local-path-provisioner for automatic storage provisioning
+kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
+
+# Set it as default storage class
+kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+
+# Verify storage class is ready
+kubectl get storageclass
 ```
 
 ### Step 3: Deploy the application
@@ -78,12 +99,17 @@ helm install \
 Now you're ready to deploy the Smart Intersection application:
 
 ```bash
-# Install the chart
+# Install the chart (works on both single-node and multi-node clusters)
 helm upgrade --install smart-intersection ./smart-intersection/chart \
   --create-namespace \
   --set grafana.service.type=NodePort \
+  --set global.storageClassName="" \
   -n smart-intersection
 ```
+
+> **Note**: Using `global.storageClassName=""` makes the deployment use whatever default storage class exists on your cluster. This works for both single-node and multi-node setups.
+
+> **Note**: If you encounter any issues during deployment, see the [Troubleshooting Guide](./support.md#troubleshooting-helm-deployments) for detailed solutions.
 
 ## Access Application Services using Node Port
 
@@ -117,57 +143,44 @@ kubectl get service smart-intersection-grafana -n smart-intersection -o jsonpath
   - **Username**: `admin`
   - **Password**: `admin`
 
-## Access Application Services using Port Forwarding (Optional)
+### Access the InfluxDB UI using Node Port
 
-### Access the Application UI
-
-```bash
-WEB_POD=$(kubectl get pods -n smart-intersection -l app=smart-intersection-web -o jsonpath="{.items[0].metadata.name}")
-sudo -E kubectl -n smart-intersection port-forward $WEB_POD 443:443 --address <HOST_IP>
-```
-
-- Go to https://<HOST_IP>
-- **Log in with credentials**:
-  - **Username**: `admin`
-  - **Password**: Stored in `supass` secret. To retrieve run the following command:
-
-    ```bash
-    kubectl get secret smart-intersection-supass-secret -n smart-intersection -o jsonpath='{.data.supass}' | base64 -d && echo
-    ```
-
-### Access the Grafana UI
+- Get the Node Port Number using following command and use it to access the InfluxDB UI
 
 ```bash
-GRAFANA_POD=$(kubectl get pods -n smart-intersection -l app=smart-intersection-grafana -o jsonpath="{.items[0].metadata.name}")
-kubectl -n smart-intersection port-forward $GRAFANA_POD 3000:3000
+kubectl get service influxdb2 -n smart-intersection -o jsonpath='{.spec.ports[0].nodePort}'
 ```
 
 - Go to http://<HOST_IP>:<Node_PORT>
 - **Log in with credentials**:
   - **Username**: `admin`
-  - **Password**: `admin`
+  - **Password**: Stored in InfluxDB secrets. To retrieve run the following command:
 
-### Access the InfluxDB UI
+    ```bash
+    kubectl get secret smart-intersection-influxdb-secrets -n smart-intersection -o jsonpath='{.data.influxdb2-admin-password}' | base64 -d && echo
+    ```
 
-```bash
-INFLUX_POD=$(kubectl get pods -n smart-intersection -l app=smart-intersection-influxdb -o jsonpath="{.items[0].metadata.name}")
-kubectl -n smart-intersection port-forward $INFLUX_POD 8086:8086
-```
+### Access the NodeRED UI using Node Port
 
-### Access the NodeRED UI
-
-```bash
-NODE_RED_POD=$(kubectl get pods -n smart-intersection -l app=smart-intersection-nodered -o jsonpath="{.items[0].metadata.name}")
-kubectl -n smart-intersection port-forward $NODE_RED_POD 1880:1880
-```
-
-### Access the DL Streamer Pipeline Server
+- Get the Node Port Number using following command and use it to access the NodeRED UI
 
 ```bash
-DLS_PS_POD=$(kubectl get pods -n smart-intersection -l app=smart-intersection-dlstreamer-pipeline-server -o jsonpath="{.items[0].metadata.name}")
-kubectl -n smart-intersection port-forward $DLS_PS_POD 8080:8080
-kubectl -n smart-intersection port-forward $DLS_PS_POD 8555:8555
+kubectl get service smart-intersection-nodered -n smart-intersection -o jsonpath='{.spec.ports[0].nodePort}'
 ```
+
+- Go to http://<HOST_IP>:<Node_PORT>
+- **No login required** - NodeRED flows editor for visual programming
+
+### Access the DL Streamer Pipeline Server using Node Port
+
+- Get the Node Port Number using following commands:
+
+```bash
+kubectl get service smart-intersection-dlstreamer-pipeline-server -n smart-intersection -o jsonpath='{.spec.ports[0].nodePort}'
+```
+
+- **API Access**: http://<HOST_IP>:<API_PORT>/pipelines/status
+- **Purpose**: AI pipeline management and streaming interface
 
 ## Uninstall the Application
 
@@ -184,6 +197,27 @@ To delete the namespace and all resources within it, run the following command:
 ```bash
 kubectl delete namespace smart-intersection
 ```
+
+## Complete Cleanup (Optional)
+
+If you want to completely remove all infrastructure components installed during the setup process, including cert-manager and storage provisioner:
+
+### Remove cert-manager
+```bash
+kubectl delete -f https://github.com/cert-manager/cert-manager/releases/download/v1.18.2/cert-manager.yaml
+```
+
+### Remove local-path-provisioner (if installed)
+```bash
+kubectl delete -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
+```
+
+### Remove additional storage classes (if created)
+```bash
+kubectl delete storageclass hostpath local-storage standard
+```
+
+> **Note**: This complete cleanup will remove all certificate management capabilities and storage provisioning from your cluster. You'll need to reinstall these components for future deployments.
 
 ## What to Do Next
 

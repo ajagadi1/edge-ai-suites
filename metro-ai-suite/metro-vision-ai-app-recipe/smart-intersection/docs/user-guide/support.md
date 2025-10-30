@@ -129,5 +129,71 @@ This page provides comprehensive support and troubleshooting information for the
      kubectl get svc -n {{namespace}}
      ```
 
+### 4. cert-manager Webhook Issues:
+
+   If you see errors like `failed calling webhook "webhook.cert-manager.io"` during deployment, this is usually due to cert-manager webhook certificates not being properly initialized. Here's how to resolve it:
+
+   #### Option 1: Wait and Retry (Recommended)
+   ```bash
+   # Wait for cert-manager webhook to be fully ready
+   kubectl wait --for=condition=Available --timeout=120s deployment/cert-manager-webhook -n cert-manager
+
+   # Give additional time for webhook certificates to be generated
+   sleep 30
+
+   # Retry the deployment
+   helm upgrade --install smart-intersection ./smart-intersection/chart \
+     --create-namespace \
+     --set grafana.service.type=NodePort \
+     --set global.storageClassName="" \
+     -n smart-intersection
+   ```
+
+   #### Option 2: Temporary Webhook Bypass (If Option 1 fails)
+   ```bash
+   # Temporarily remove webhook configurations
+   kubectl delete validatingwebhookconfiguration cert-manager-webhook --ignore-not-found
+   kubectl delete mutatingwebhookconfiguration cert-manager-webhook --ignore-not-found
+
+   # Deploy the application
+   helm upgrade --install smart-intersection ./smart-intersection/chart \
+     --create-namespace \
+     --set grafana.service.type=NodePort \
+     --set global.storageClassName="" \
+     -n smart-intersection
+
+   # Restore webhook configurations
+   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.18.2/cert-manager.yaml
+   ```
+
+### 5. Storage Issues:
+
+   If you see pods stuck in `Pending` status with "unbound immediate PersistentVolumeClaims" errors, your cluster lacks a default storage class with dynamic provisioning.
+
+   #### Check Storage Classes
+   ```bash
+   # Check if you have a default storage class
+   kubectl get storageclass
+   ```
+
+   #### Install Storage Provisioner (If Needed)
+   If no storage classes are marked as `(default)`, install a storage provisioner:
+
+   ```bash
+   # Install local-path-provisioner for automatic storage provisioning
+   kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
+
+   # Set it as default storage class
+   kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+
+   # Redeploy the application
+   helm uninstall smart-intersection -n smart-intersection
+   helm upgrade --install smart-intersection ./smart-intersection/chart \
+     --create-namespace \
+     --set grafana.service.type=NodePort \
+     --set global.storageClassName="" \
+     -n smart-intersection
+   ```
+
 ## Support
 - **Raise an Issue on GitHub**: [GitHub Issues](https://github.com/open-edge-platform/edge-ai-suites/issues)
