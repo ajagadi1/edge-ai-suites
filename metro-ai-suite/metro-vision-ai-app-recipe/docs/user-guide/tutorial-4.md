@@ -29,7 +29,7 @@ By following this guide, you will learn how to:
 <!--
 **Architecture Image Placeholder**: Add architecture diagram showing the flow from video input through AI models to toll processing output
 -->
-![Crowd Analytics System Diagram](_images/ai-tolling-system.svg)
+![Crowd Analytics System Diagram](_images/metro-vision-ai-app-recipe-architecture.drawio.svg)
 
 
 The AI Crowd Analytics system consists of several key components:
@@ -104,7 +104,7 @@ The installation script downloads and sets up essential AI models:
 
 | **Model Name** | **Purpose** | **Framework** | **Size** |
 |----------------|-------------|---------------|----------|
-| YOLO11s | Vehicle detection and localization | PyTorch/OpenVINO | ~20MB |
+| YOLO11s | Vehicle detection and localization | PyTorch/OpenVINO | ~65MB |
 
 <details>
 <summary>
@@ -163,7 +163,8 @@ The GStreamer pipeline configuration defines the crowd analytics AI processing w
 
 - **Source**: Accepts video input from parking lot camera feeds or video files
 - **Decode**: Converts video format to raw frames for processing  
-- **gvadetect**: Runs the YOLO11s object detection model (FP32 optimized) on CPU to identify and locate vehicles in each frame
+- **gvaattachroi**: Defines a region of interest (ROI) with coordinates thus improving performance by processing only the relevant portion of the frame
+- **gvadetect**: Runs the YOLO11s object detection model (FP16 optimized) on CPU to identify and locate vehicles in each frame
 - **gvatrack**: Tracks detected vehicles across frames using imageless tracking, assigning persistent IDs to each vehicle without storing frame images
 - **gvametaconvert**: Converts inference results to structured metadata with vehicle positions
 - **gvafpscounter**: Monitors processing performance
@@ -282,6 +283,10 @@ For local testing, you can use: `https://localhost/mediamtx/object_detection_1/`
 
 ![Crowd Analytics Live Detection](_images/crowd_analytics_detection.png)
 
+Expected results:
+- Accurate vehicle detection in parking lot scenario
+- Real-time vehicle tracking with consistent IDs across frames
+
 ## Troubleshooting
 
 ### 1. **Container Startup Issues**
@@ -318,8 +323,9 @@ For slow processing or high CPU usage:
 - **Adjust inference device**: Change from CPU to GPU if available
 - **Optimize pipeline**: Reduce queue sizes or disable unnecessary features
 
------------------------------------------------
-## Customizing Node-RED Flows for Crowd Analytics Applications
+-------------------------------
+
+# Customizing Node-RED Flows for Crowd Analytics Applications
 
 <!--
 **Sample Description**: This tutorial demonstrates how to customize Node-RED flows to process vehicle detection data and implement crowd analytics logic, enabling real-time crowd formation detection and proximity analysis.
@@ -331,7 +337,7 @@ The following steps guides you through customizing Node-RED flows to implement c
 **What You Can Do**: This guide covers the complete workflow for implementing crowd detection algorithms in Node-RED.
 -->
 
-By following this guide, you will learn how to:
+By following these steps, you will learn how to:
 - **Access and Launch Node-RED**: Connect to the Node-RED interface and understand the flow-based programming environment
 - **Clear and Reset Flows**: Remove existing flows and start with a clean workspace for custom development
 - **Connect to MQTT Data Streams**: Establish connections to receive real-time AI inference data from metro vision applications
@@ -614,16 +620,17 @@ let vehicles = msg.payload.vehicles;
 let currentTimestamp = msg.payload.timestamp;
 
 // Configuration parameters
-const DISTANCE_THRESHOLD = 150;
-const MIN_HOTSPOT_SIZE = 2;
-const PARKED_THRESHOLD = 150;  // maximum movement (pixels) permitted within the frame-window to consider a vehicle stationary
-const PARKED_FRAMES_REQUIRED = 15; // number of consecutive frames the vehicle must appear stationary before marking as parked
-const MOVING_FRAMES_GRACE = 30;
-const HISTORY_TIMEOUT = 5000;
-const DISTANCE_MODE = "euclidean";
-const INCLUDE_OVERLAPPING = true;
-const OVERLAP_THRESHOLD = 0.3;
-const HOTSPOT_STABILITY_FRAMES = 20;
+const DISTANCE_THRESHOLD = 150;       // Maximum distance (pixels) to consider vehicles part of same hotspot
+const MIN_HOTSPOT_SIZE = 2;           // Minimum number of parked vehicles to form a hotspot
+const PARKED_THRESHOLD = 150;         // Maximum movement (pixels) to consider a vehicle stationary
+const PARKED_FRAMES_REQUIRED = 15;    // Frames vehicle must stay stationary to be marked as parked
+const MOVING_FRAMES_GRACE = 30;       // Allowed consecutive moving frames before resetting parked status
+const HISTORY_TIMEOUT = 5000;         // Time (ms) to keep vehicle history without updates
+const DISTANCE_MODE = "euclidean";    // Distance calculation method: "euclidean", "manhattan", etc.
+const INCLUDE_OVERLAPPING = true;     // Whether overlapping vehicles are allowed in same hotspot
+const OVERLAP_THRESHOLD = 0.3;        // Maximum allowed bounding box overlap fraction for separate hotspots
+const HOTSPOT_STABILITY_FRAMES = 20;  // Frames a hotspot must persist to be considered stable
+
 
 // Calculate distance between two positions
 function calculateDistance(pos1, pos2, mode = DISTANCE_MODE) {
@@ -961,11 +968,11 @@ Create debug nodes to monitor the hotspot analytics pipeline:
    - Set each debug node to output `msg.payload`
    - Enable console output for troubleshooting
 
-### 10. **Expected Node-RED Flow**
+### Expected Node-RED Flow
 
 ![Crowd Analytics Node-RED Flow](_images/crowd-analytics-node-red-flow.png)
 
-### 11. **Deploy and Validate the Crowd Analytics Flow**
+### 10. **Deploy and Validate the Crowd Analytics Flow**
 
 Test your complete crowd analytics Node-RED flow:
 
@@ -974,32 +981,56 @@ Test your complete crowd analytics Node-RED flow:
 
 2. **Monitor Crowd Analytics**:
    - Open the debug panel in Node-RED
-   - Start the crowd analytics pipeline using the curl command from step 4
+   - Start the crowd analytics pipeline using the curl command:
+    ```bash
+   curl -k -s https://localhost/api/pipelines/user_defined_pipelines/yolov11s_crowd_analytics -X POST -H 'Content-Type: application/json' -d '
+   {
+       "source": {
+           "uri": "file:///home/pipeline-server/videos/easy1.mp4",
+           "type": "uri"
+       },
+       "destination": {
+           "metadata": {
+               "type": "mqtt",
+               "topic": "object_detection_1",
+               "timeout": 1000
+           },
+           "frame": {
+               "type": "webrtc",
+               "peer-id": "object_detection_1"
+           }
+       },
+       "parameters": {
+           "detection-device": "CPU"
+       }
+   }'
+   ```
    - Verify that vehicle detection data flows through each stage
    - Vehicle crowd alert generation for different congestion scenarios
    - Review hotspot length calculations in the output
 
 ## Troubleshooting
 
-### **No Data in Debug Panel**
+### 1. **No Data in Debug Panel**
 - **Problem**: Debug nodes show no incoming data
 - **Solution**: 
   - Verify the AI application is running and generating inference data
   - Check MQTT topic names match your application's output topics
   - Ensure proper JSON parsing in function nodes
 
-### **Function Node Errors**
+### 2. **Function Node Errors**
 - **Problem**: Function node shows errors in the debug panel
 - **Solution**: 
   - Add try-catch blocks around JSON parsing
   - Use `node.warn()` or `node.error()` for debugging
   - Validate input data structure before processing
 
------------------------------
 
-After successfully implementing hotspot analytics with Node-RED, follow the next steps to set up Grafana dashboards for visualizing the hotspot data and metrics. This will allow you to monitor vehicle congestion and hotspot formations in real-time.
+After successfully implementing hotspot analytics with Node-RED, follow the following steps to set up Grafana dashboards for visualizing the hotspot data and metrics. This will allow you to monitor vehicle congestion and hotspot formations in real-time, providing valuable insights.
 
-### Visualizing Hotspot Analytics in Grafana
+
+---------------------------------------
+# Visualizing Hotspot Analytics in Grafana
 
 The hotspot analytics data published to `hotspot_analytics` can be visualized in real-time using Grafana.
 
@@ -1050,7 +1081,7 @@ The hotspot analytics data published to `hotspot_analytics` can be visualized in
    a. **Sort by**:
       - Click **"+ Add transformation"** → Select **"Sort by"**
       - **Field**: Select **"Time"**
-      - **Order**: Select **Descending** (newest first)
+      - **Reverse**: Toggle to **On** (newest first)
       - Click **Apply**
       
       **Purpose**: Ensures the most recent data for each hotspot appears first
@@ -1076,7 +1107,6 @@ The hotspot analytics data published to `hotspot_analytics` can be visualized in
 4. **Configure Time Window and Refresh** (for real-time display):
    - **Time Range** (top-right corner): Set to **"Last 5 seconds"**
    - **Auto-refresh**: Select **"5s"** from dropdown
-   - **Panel Title**: "Parking Crowd Analytics"
    - Click **Save**
 
 5. **Save Dashboard**
@@ -1109,6 +1139,7 @@ The hotspot analytics data published to `hotspot_analytics` can be visualized in
        }
    }'
    ```
+
 ## Expected Results
 
 ![Crowd Analytics Grafana](_images/crowd-analytics-grafana.png)
