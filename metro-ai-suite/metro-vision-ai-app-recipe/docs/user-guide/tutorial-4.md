@@ -1,14 +1,7 @@
 # AI Crowd Analytics Tutorial
 
-<!--
-**Sample Description**: This tutorial demonstrates how to build an intelligent crowd analytics system using edge AI technologies for real-time vehicle detection and crowd identification in parking lots.
--->
-
 This tutorial walks you through creating an AI-powered crowd analytics system that automatically detects vehicles and identifies whether they form a "crowd" (closely grouped vehicles) or are scattered individually. The system leverages Intel's DLStreamer framework with pre-trained AI models to process video streams and analyze vehicle clustering patterns in real-time.
 
-<!--
-**What You Can Do**: This guide covers the complete development workflow for building an AI crowd analytics application.
--->
 
 By following this guide, you will learn how to:
 - **Set up the Crowd Analytics Application**: Create a new application based on the Smart Parking template and configure it for crowd detection use cases
@@ -26,9 +19,6 @@ By following this guide, you will learn how to:
 
 ## Application Architecture Overview
 
-<!--
-**Architecture Image Placeholder**: Add architecture diagram showing the flow from video input through AI models to toll processing output
--->
 ![Crowd Analytics System Diagram](_images/metro-vision-ai-app-recipe-architecture.drawio.svg)
 
 
@@ -158,7 +148,6 @@ EOF
 <summary>
 Pipeline Configuration Explanation
 </summary>
-
 The GStreamer pipeline configuration defines the crowd analytics AI processing workflow:
 
 - **Source**: Accepts video input from parking lot camera feeds or video files
@@ -170,6 +159,7 @@ The GStreamer pipeline configuration defines the crowd analytics AI processing w
 - **gvafpscounter**: Monitors processing performance
 
 </details>
+
 
 ### 5. **Configure Application Environment**
 
@@ -327,15 +317,8 @@ For slow processing or high CPU usage:
 
 # Customizing Node-RED Flows for Crowd Analytics Applications
 
-<!--
-**Sample Description**: This tutorial demonstrates how to customize Node-RED flows to process vehicle detection data and implement crowd analytics logic, enabling real-time crowd formation detection and proximity analysis.
--->
-
 The following steps guides you through customizing Node-RED flows to implement crowd analytics logic for vehicle detection data. You'll learn how to connect to MQTT data streams from the crowd analytics pipeline, calculate vehicle proximities using Euclidean distances, detect crowd formations (clusters of vehicles in close proximity), and create enhanced analytics outputs.
 
-<!--
-**What You Can Do**: This guide covers the complete workflow for implementing crowd detection algorithms in Node-RED.
--->
 
 By following these steps, you will learn how to:
 - **Access and Launch Node-RED**: Connect to the Node-RED interface and understand the flow-based programming environment
