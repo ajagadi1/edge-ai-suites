@@ -164,8 +164,16 @@ services:
       - scenescape
     privileged: true
     entrypoint: ["./run.sh"]
+    group_add:
+      - "109"
+      - "110"
+      - "992"
+    device_cgroup_rules:
+      - 'c 189:* rmw'
+      - 'c 209:* rmw'
+      - 'a 189:* rwm'
     devices:
-      - "/dev/dri:/dev/dri"
+      - "/dev:/dev"
     depends_on:
       - broker
       - ntpserver
