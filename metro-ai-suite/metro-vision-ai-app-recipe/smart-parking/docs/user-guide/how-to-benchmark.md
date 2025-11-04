@@ -36,6 +36,22 @@ During each test run, the script logs the `avg_fps` for every active pipeline in
 -   **Cumulative Throughput:** The sum of the FPS from all streams.
 -   **Min Throughput:** The lowest (worst-case) FPS achieved among all streams. This value is critical for the stream density calculation.
 
+### Recommended Pipeline Parameters
+
+These are the recommended parameters by Edge Benchmarking and Workloads team for workload with similar characteristics. These are configurable parameters that can be adjusted based on your specific requirements:
+
+```
+inference-region=1 inference-interval=3 batch-size=8 nireq=2 ie-config="NUM_STREAMS=2" threshold=0.7
+```
+
+**Parameter Descriptions:**
+- `inference-region=1`: Use the region-of-interest (ROI) set by the `gvaattachroi` element for detection.
+- `inference-interval=3`: Run inference on every 3rd frame.
+- `batch-size=8`: Process 8 frames in a single batch for better GPU utilization.
+- `nireq=2`: Number of inference requests to run in parallel.
+- `ie-config="NUM_STREAMS=2"`: Intel OpenVINO engine streams configuration.
+- `threshold=0.7`: Detection confidence threshold (70%).
+
 ## Step 2: Prepare for Benchmarking
 
 1.  **Set Up and Start the Application:** Before running the benchmark, you must set up and start the desired application (e.g., Smart Parking). This ensures all services, including the DL Streamer Pipeline Server, are running and available. For setup instructions, please refer to the `get-started.md` guide located in the specific application's documentation folder (e.g., `smart-parking/docs/user-guide/`).
@@ -53,6 +69,8 @@ During each test run, the script logs the `avg_fps` for every active pipeline in
     ```
 
 ## Step 3: Run the Benchmark
+
+> **Note:** The default parameters are set based on best know methods recommended by Edge Workloads and Benchamarks group for workload with similar characteristics. These parameters can be modified when starting the pipelines.
 
 The `benchmark_start.sh` script requires a pipeline name and stream count boundaries to run. The available pipelines are defined in the `benchmark_app_payload.json` file located within each application's directory (e.g., `smart-parking/`).
 
