@@ -1,4 +1,4 @@
-# Guide: Tesing Worker Safety Gear Detection Application Using Balluff SDK
+# Guide: Testing Worker Safety Gear Detection Application Using Balluff SDK
 
 This guide explains how to create a custom Docker image based on the Intel DL Streamer Pipeline Server, with Balluff SDK and Gencamsrc support. It supports Balluff, Basler, and other GenICam-compatible cameras over USB and GigE interfaces.
 

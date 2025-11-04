@@ -1,4 +1,4 @@
-# Guide: Tesing Pallet Defect Detection (PDD) Application Using pylon SDK
+# Guide: Testing Pallet Defect Detection (PDD) Application Using pylon SDK
 
 This guide explains how to create a custom Docker image based on the Intel DL Streamer Pipeline Server, with pylon SDK and Gencamsrc support. It supports Basler camera that are connected over the USB and GigE.
 
