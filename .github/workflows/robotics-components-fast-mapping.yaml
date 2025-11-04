@@ -75,22 +75,23 @@ jobs:
         run: |
           ROS_DISTRO=${{ matrix.ros_distro }} make test
 
-      - name: Debug info (artifacts)
-        shell: bash
-        run: |
-          find . -type d -name Testing
-          find . -type d -name test_results
+      # - name: Debug info (artifacts)
+      #   shell: bash
+      #   run: |
+      #     find . -type d -name Testing
+      #     find . -type d -name test_results
 
-      - name: Debug info (artifacts)
-        shell: bash
-        run: |
-          find . -wholename "**/Testing/*"
-          find . -wholename "**/test_results/*"
+      # - name: Debug info (artifacts)
+      #   shell: bash
+      #   run: |
+      #     find . -wholename "**/Testing/*"
+      #     find . -wholename "**/test_results/*"
 
       - name: Upload test results
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # v5.0.0
         with:
           name: 'test-results-fast-mapping-${{ matrix.ros_distro }}'
+          if-no-files-found: error
           path: |
             **/build/fast_mapping/Testing
             **/build/fast_mapping/test_results
@@ -115,16 +116,22 @@ jobs:
         run: |
           ROS_DISTRO=${{ matrix.ros_distro }} make package
 
-      - name: Debug info (artifacts)
-        shell: bash
-        run: |
-          find . -type f -name "*.deb"
+      # - name: Debug info (artifacts)
+      #   shell: bash
+      #   run: |
+      #     find . -type f -name "*.deb"
 
       - name: Collect build artifacts
         shell: bash
         run: |
           mkdir -p output/fast-mapping
-          find . -name "*.deb" -not -name "*-build-deps_*" -not -name "*-dbgsym_*" -exec mv {} output/fast-mapping \; 2>/dev/null || true
+          find . -name "*.deb" -not -name "*-build-deps_*" -not -name "*-dbgsym_*" -exec mv {} output/fast-mapping \; 2>/dev/null
+          if [ "$(ls -1 output/fast-mapping | wc -l)" -gt 0 ]; then
+            echo "Debian packages collected.";
+          else
+            echo "No Debian packages found!";
+            exit 1;
+          fi
 
       - name: Debug info (artifacts) - output folder
         shell: bash
@@ -135,6 +142,7 @@ jobs:
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # v5.0.0
         with:
           name: packages-fast-mapping-${{ matrix.ros_distro }}
+          if-no-files-found: error
           path: |
             **/output/fast-mapping/*.deb
 
@@ -160,6 +168,20 @@ jobs:
         with:
           name: packages-fast-mapping-${{ matrix.ros_distro }}
           path: ./
+
+      - name: Debug info (artifacts)
+        shell: bash
+        run: |
+          find . -name "*.deb"
+
+      - name: Place *.deb in the working folder
+        run: |
+          mv **/*.deb ./
+
+      - name: Debug info (artifacts)
+        shell: bash
+        run: |
+          find . -name "*.deb"
 
       - name: Run E2E tests
         run: ROS_DISTRO=${{ matrix.ros_distro }} make test-e2e
