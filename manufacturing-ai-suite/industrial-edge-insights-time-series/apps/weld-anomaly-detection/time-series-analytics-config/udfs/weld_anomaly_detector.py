@@ -8,7 +8,6 @@
 
 import os
 import logging
-import pickle
 import time
 import warnings
 from xml.parsers.expat import model
@@ -46,17 +45,11 @@ class AnomalyDetectorHandler(Handler):
     """
     def __init__(self, agent):
         self._agent = agent
-        # read the saved model and load it
-        def load_model(filename):
-            with open(filename, 'rb') as f:
-                model = pickle.load(f)
-            return model
         # Need to enable after model training
         model_name = (os.path.basename(__file__)).replace('.py', '.cb')
         model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    "../models/" + model_name)
         model_path = os.path.abspath(model_path)
-        # self.rf = load_model(model_path)
 
         # Initialize a CatBoostClassifier model for anomaly detection
         self.model = cb.CatBoostClassifier(
