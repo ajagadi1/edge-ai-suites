@@ -282,7 +282,7 @@ jobs:
                 if [ -n "$IMAGE_SUFFIX" ]; then
                     WELD_SIMULATOR_IMAGE="${WELD_SIMULATOR_IMAGE}-${IMAGE_SUFFIX}"
                     FUSION_MODULE_IMAGE="${FUSION_MODULE_IMAGE}-${IMAGE_SUFFIX}"
-                    DLSTREAMER_PIPELINE_SERVER_IMAGE="${DLSTREAMER_PIPELINE_SERVER_IMAGE}-${IMAGE_SUFFIX}"
+                    DLSTREAMER_PIPELINE_SERVER_IMAGE="${DLSTREAMER_PIPELINE_SERVER_IMAGE}"
                 fi
 
                 make build
