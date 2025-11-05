@@ -109,59 +109,28 @@ helm upgrade --install smart-intersection ./smart-intersection/chart \
   --set global.storageClassName="" \
   -n smart-intersection
 
-# Alternatively, you can override the external IP during installation:
-# helm upgrade --install smart-intersection ./smart-intersection/chart \
-#   --create-namespace \
-#   --set global.storageClassName="" \
-#   --set global.externalIP="YOUR_EXTERNAL_IP" \
-#   -n smart-intersection
-
 # Wait for all pods to be ready
 kubectl wait --for=condition=ready pod --all -n smart-intersection --timeout=300s
 ```
 
-> **Note**: Using `global.storageClassName=""` makes the deployment use whatever default storage class exists on your cluster. This works for both single-node and multi-node setups.
-
-> **Note**: The application now uses self-signed certificates generated directly in Kubernetes secrets, providing HTTPS access without requiring cert-manager. This eliminates webhook validation issues and simplifies deployment.
-
-> **Important**: Make sure you have configured the correct external IP address in Step 2, as this is required for proper certificate generation and web application security configuration.
+> **Note**: Using `global.storageClassName=""` makes the deployment use whatever default storage class exists on your cluster.
 
 ## Access Application Services
 
-The Smart Intersection application provides multiple access methods, similar to the Docker Compose setup:
-
-### Nginx Reverse Proxy Access (HTTPS - Recommended)
-
-All services are accessible through the nginx reverse proxy with TLS encryption using self-signed certificates:
-
-- **Smart Intersection (Main UI)**: `https://<HOST_IP>:30443/` - Fully functional
-- **Grafana Dashboard**: `https://<HOST_IP>:30443/grafana/` - Fully functional  
-- **NodeRED Editor**: `https://<HOST_IP>:30443/nodered/` - Fully functional
-- **DL Streamer API**: `https://<HOST_IP>:30443/api/pipelines/` - Fully functional
-
-> **Security Note**: The application uses self-signed certificates for HTTPS. Your browser will show a security warning when first accessing the site. Click "Advanced" and "Proceed to site" (or equivalent) to continue. This is safe for local deployments.
-
-### Direct Service Access
-
-Additional services provide direct access on dedicated ports:
-
-- **InfluxDB**: `http://<HOST_IP>:30086/` - Full database functionality and web UI
-
-### Service Credentials
-
-#### Smart Intersection Web UI
+### Smart Intersection Application UI
+- **URL**: `https://<HOST_IP>:30443/`
 - **Username**: `admin`
 - **Password**: Get from secrets:
   ```bash
   kubectl get secret smart-intersection-supass-secret -n smart-intersection -o jsonpath='{.data.supass}' | base64 -d && echo
   ```
 
-#### Grafana Dashboard  
+### Grafana Dashboard  
+- **URL**: `https://<HOST_IP>:30443/grafana/`
 - **Username**: `admin`
 - **Password**: `admin`
 
-#### InfluxDB (Direct Access for Login)
-- **Access**: Use direct access on port 30086 for login and full functionality
+### InfluxDB
 - **URL**: `http://<HOST_IP>:30086/`
 - **Username**: `admin`
 - **Password**: Get from secrets:
@@ -169,13 +138,18 @@ Additional services provide direct access on dedicated ports:
   kubectl get secret smart-intersection-influxdb-secrets -n smart-intersection -o jsonpath='{.data.influxdb2-admin-password}' | base64 -d && echo
   ```
 
-#### NodeRED Editor
+### NodeRED Editor
+- **URL**: `https://<HOST_IP>:30443/nodered/`
 - **No login required** - Visual programming interface
 
-#### DL Streamer Pipeline Server
+### DL Streamer Pipeline Server
+- **URL**: `https://<HOST_IP>:30443/api/pipelines/status`
 - **API Access**: No authentication required for status endpoints
 
 > **Note**: For InfluxDB, use the direct access on port 30086 (`http://<HOST_IP>:30086/`) for login and full functionality. The proxy access through nginx (`https://<HOST_IP>:30443/influxdb/`) provides basic functionality and API access but is not recommended for the web UI login.
+
+> **Security Note**: The application uses self-signed certificates for HTTPS. Your browser will show a security warning when first accessing the site. Click "Advanced" and "Proceed to site" (or equivalent) to continue. This is safe for local deployments.
+
 
 ## Uninstall the Application
 
@@ -215,115 +189,6 @@ kubectl delete storageclass hostpath local-storage standard
 ```
 
 > **Note**: This complete cleanup will remove storage provisioning from your cluster. You'll need to reinstall the storage provisioner for future deployments that require persistent volumes.
-
-## Troubleshooting
-
-### Installation Failed: Secrets Already Exist
-
-If you encounter installation errors like:
-```
-Error: INSTALLATION FAILED: 3 errors occurred:
-        * secrets "smart-intersection-web-tls" already exists
-        * secrets "smart-intersection-broker-tls" already exists
-        * secrets "smart-intersection-ca-secret" already exists
-```
-
-This occurs when TLS secrets from a previous deployment still exist in the namespace. To resolve this:
-
-1. **Delete the existing secrets**:
-   ```bash
-   kubectl delete secret smart-intersection-web-tls smart-intersection-broker-tls smart-intersection-ca-secret -n smart-intersection --ignore-not-found
-   ```
-
-2. **Alternative: Delete and recreate the entire namespace** (recommended for clean start):
-   ```bash
-   # Uninstall the Helm release if it exists
-   helm uninstall smart-intersection -n smart-intersection --ignore-not-found
-   
-   # Delete the namespace (this removes all secrets and resources)
-   kubectl delete namespace smart-intersection
-   
-   # Reinstall with a clean slate
-   helm upgrade --install smart-intersection ./smart-intersection/chart \
-     --create-namespace \
-     --set grafana.service.type=NodePort \
-     --set global.storageClassName="" \
-     -n smart-intersection
-   ```
-
-3. **Force recreate secrets if namespace deletion isn't desired**:
-   ```bash
-   # Remove all TLS secrets in the namespace
-   kubectl get secrets -n smart-intersection -o name | grep -E "(tls|ca-secret)" | xargs kubectl delete -n smart-intersection --ignore-not-found
-   
-   # Then retry the helm install
-   helm upgrade --install smart-intersection ./smart-intersection/chart \
-     --create-namespace \
-     --set grafana.service.type=NodePort \
-     --set global.storageClassName="" \
-     -n smart-intersection
-   ```
-
-> **Note**: The automatic certificate generation system creates these TLS secrets during deployment. If they already exist from a previous installation, they must be removed before a fresh deployment.
-
-### 403 Forbidden Error on Login
-
-If you encounter a 403 Forbidden error when trying to log in, this is typically a CSRF (Cross-Site Request Forgery) protection issue. The web service startup script should automatically configure the CSRF trusted origins, but if issues persist:
-
-1. **Check the web pod logs**:
-   ```bash
-   kubectl logs -l app=smart-intersection-web -n smart-intersection --tail=20
-   ```
-
-2. **Restart the web service**:
-   ```bash
-   kubectl rollout restart deployment smart-intersection-web -n smart-intersection
-   ```
-
-3. **Verify CSRF configuration**:
-   ```bash
-   kubectl exec -l app=smart-intersection-web -n smart-intersection -- grep -A10 "CSRF_TRUSTED_ORIGINS" /home/scenescape/SceneScape/manager/settings.py
-   ```
-
-### Cameras Showing as Offline
-
-If cameras appear offline in the UI:
-
-1. **Check all pods are running**:
-   ```bash
-   kubectl get pods -n smart-intersection
-   ```
-
-2. **Verify scene service is running**:
-   ```bash
-   kubectl logs -l app=smart-intersection-scene -n smart-intersection --tail=20
-   ```
-
-3. **Check DL Streamer pipeline server**:
-   ```bash
-   kubectl logs -l app=smart-intersection-dlstreamer-pipeline-server -n smart-intersection --tail=20
-   ```
-
-4. **Restart scene service if needed**:
-   ```bash
-   kubectl rollout restart deployment smart-intersection-scene -n smart-intersection
-   ```
-
-### Database Connection Issues
-
-If services fail to connect to the database:
-
-1. **Check database pod status**:
-   ```bash
-   kubectl get pods -l app=smart-intersection-pgserver -n smart-intersection
-   ```
-
-2. **Reset database if needed** (this will remove all data):
-   ```bash
-   kubectl scale deployment smart-intersection-pgserver --replicas=0 -n smart-intersection
-   kubectl delete pvc smart-intersection-pgserver-db -n smart-intersection
-   kubectl scale deployment smart-intersection-pgserver --replicas=1 -n smart-intersection
-   ```
 
 ## What to Do Next
 
