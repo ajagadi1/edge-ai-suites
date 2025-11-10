@@ -65,13 +65,46 @@ EOF
 openssl x509 -req -in server.csr -CA ca_certificate.pem -CAkey ca.key \
   -CAcreateserial -out opcua_server_certificate.pem -days 365 \
   -extensions v3_req -extfile server.ext
+```
 
-cp opcua_server.key server_key.pem
-cp opcua_server_certificate.pem server_certificate.pem
-# Set proper ownership
-sudo chown $TIMESERIES_UID:$TIMESERIES_UID ca_certificate.pem server_key.pem server_certificate.pem
-sudo chmod 664 ca_certificate.pem server_key.pem server_certificate.pem
+### Generate Client Certificate
+```bash
+# Generate client private key
+openssl genrsa -out opcua_client.key 3072
+
+# Generate client certificate signing request
+openssl req -new -key opcua_client.key -out client.csr \
+  -subj "/C=US/ST=State/L=City/O=Organization/OU=OrgUnit/CN=telegraf-opcua-client"
+
+# Create client extensions file
+cat > client.ext << EOF
+[v3_req]
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+extendedKeyUsage = clientAuth
+EOF
+
+# Generate client certificate signed by CA
+openssl x509 -req -in client.csr -CA ca_certificate.pem -CAkey ca.key \
+  -CAcreateserial -out opcua_client_certificate.pem -days 365 \
+  -extensions v3_req -extfile client.ext
+
+# Copy client certificates with expected filenames
+cp opcua_client.key client_key.pem
+cp opcua_client_certificate.pem client_certificate.pem
+
+# Set proper ownership and permissions
+sudo chown $TIMESERIES_UID:$TIMESERIES_UID ca_certificate.pem client_key.pem client_certificate.pem
+sudo chmod 664 ca_certificate.pem client_certificate.pem
+sudo chmod 600 client_key.pem
+
+# Clean up temporary files
+rm server.csr client.csr server.ext client.ext
+
 cd ..
+export OPCUA_CLIENT_CERT=client_certificate.pem
+export OPCUA_CLIENT_KEY=client_key.pem
 ```
 
 ## Step 2: Configure Docker Services
@@ -87,15 +120,15 @@ ia-telegraf:
   volumes:
     # ... existing volumes ...
     - ./certs/ca_certificate.pem:/run/secrets/ca_certificate.pem:ro
-    - ./certs/server_key.pem:/run/secrets/server_key.pem:ro
-    - ./certs/server_certificate.pem:/run/secrets/server_certificate.pem:ro
+    - ./certs/$OPCUA_CLIENT_KEY:/run/secrets/$OPCUA_CLIENT_KEY:ro
+    - ./certs/$OPCUA_CLIENT_CERT:/run/secrets/$OPCUA_CLIENT_CERT:ro
 
 ia-time-series-analytics-microservice:
   volumes:
     # ... existing volumes ...
     - ./certs/ca_certificate.pem:/run/secrets/ca_certificate.pem:ro
-    - ./certs/server_key.pem:/run/secrets/server_key.pem:ro
-    - ./certs/server_certificate.pem:/run/secrets/server_certificate.pem:ro
+    - ./certs/$OPCUA_CLIENT_KEY:/run/secrets/$OPCUA_CLIENT_KEY:ro
+    - ./certs/$OPCUA_CLIENT_CERT:/run/secrets/$OPCUA_CLIENT_CERT:ro
 
 ```
 
@@ -119,6 +152,7 @@ ia-time-series-analytics-microservice:
 
 Replace the `<YOUR_OPCUA_SERVER_URL>` with your external OPC UA server URL in `ia-telegraf`.
 Set `OPCUA_SECURE_MODE` to `true` to use TLS/SSL in `ia-time-series-analytics-microservice`.
+Set `OPCUA_SERVER_USERNAME` and `OPCUA_SERVER_PASSWORD` with your OPC UA server credentials
 
 ```yaml
 ia-telegraf:
@@ -129,6 +163,10 @@ ia-telegraf:
 ia-time-series-analytics-microservice:
   environment:
     OPCUA_SECURE_MODE: true
+    OPCUA_CLIENT_CERT: $OPCUA_CLIENT_CERT
+    OPCUA_CLIENT_KEY: $OPCUA_CLIENT_KEY
+    OPCUA_SERVER_USERNAME: <YOUR_OPCUA_USERNAME>
+    OPCUA_SERVER_PASSWORD: <YOUR_OPCUA_PASSWORD>
     # ... other environment variables ...
 ```
 
@@ -155,13 +193,13 @@ Edit your Telegraf configuration file:
   ## Security mode, one of "None", "Sign", "SignAndEncrypt", or "auto"
   security_mode = "SignAndEncrypt"
 
-  ## Path to cert.pem. Required when security mode or policy isn't "None".
+  ## Path to client cert.pem. Required when security mode or policy isn't "None".
   ## If cert path is not supplied, self-signed cert and key will be generated.
-  certificate = "/run/secrets/server_certificate.pem"
+  certificate = "/run/secrets/$OPCUA_CLIENT_CERT"
 
-  ## Path to private key.pem. Required when security mode or policy isn't "None".
+  ## Path to client private key.pem. Required when security mode or policy isn't "None".
   ## If key path is not supplied, self-signed cert and key will be generated.
-  private_key = "/run/secrets/server_key.pem"
+  private_key = "/run/secrets/$OPCUA_CLIENT_KEY"
 
   ## Authentication Method, one of "Certificate", "UserName", or "Anonymous".  To
   ## authenticate using a specific ID, select 'Certificate' or 'UserName'
@@ -226,9 +264,10 @@ For OPC UA servers, ensure the following configuration:
 1. **Security Policy**: Set to `Basic256Sha256` or higher
 2. **Security Mode**: Set to `SignAndEncrypt`  
 3. **Authentication**: Configure username/password authentication
-4. **Certificates**: Install the generated CA certificate as trusted
-5. **Server Certificate**: Use the generated server certificate
-6. **Endpoint URL**: Configure as `opc.tcp://<YOUR_OPCUA_SERVER_IP>:4840/`
+4. **CA Certificate**: Install the generated CA certificate as trusted
+5. **Server Certificate**: Use the generated server certificate (`opcua_server_certificate.pem`)
+6. **Client Certificate**: Trust the generated client certificate (`client_certificate.pem`)
+7. **Endpoint URL**: Configure as `opc.tcp://<YOUR_OPCUA_SERVER_IP>:4840/`
 
 ## Step 5: Deploy and Verify
 
