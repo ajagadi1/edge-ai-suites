@@ -235,7 +235,7 @@ Edit your Telegraf configuration file:
 > **Note:**  
 > Make sure your OPC UA server exposes nodes for both `wind_speed` and `grid_active_power`. These nodes must be available for data collection.
 
-### 3.3 Update Wind Turbine Anomaly Detection Sample app configuration
+### 3.2 Update Wind Turbine Anomaly Detection Sample app configuration
 
 Edit your sample app config file if you want to send alerts to OPC UA server:
 `edge-ai-suites/manufacturing-ai-suite/industrial-edge-insights-time-series/apps/wind-turbine-anomaly-detection/time-series-analytics-config/config.json`
