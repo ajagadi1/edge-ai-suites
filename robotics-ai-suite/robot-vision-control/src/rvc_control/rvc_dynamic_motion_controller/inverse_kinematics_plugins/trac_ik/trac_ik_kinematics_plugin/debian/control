@@ -1,12 +1,35 @@
-Source: ros-humble-trac-ik-kinematics-plugin
+Source: ros-jazzy-trac-ik-kinematics-plugin
 Section: misc
 Priority: optional
 Maintainer: Abrar Rahman Protyasha <aprotyas@u.rochester.edu>
-Build-Depends: debhelper (>= 9.0.0), libnlopt-dev, ros-humble-ament-cmake-ros, ros-humble-moveit-core, ros-humble-pluginlib, ros-humble-rclcpp, ros-humble-rclcpp-components, ros-humble-tf2, ros-humble-tf2-eigen, ros-humble-tf2-geometry-msgs, ros-humble-tf2-kdl, ros-humble-trac-ik-lib, ros-humble-visualization-msgs
+Build-Depends: debhelper (>= 9.0.0),
+    libnlopt-dev,
+    ros-jazzy-ament-cmake-ros,
+    ros-jazzy-moveit-core,
+    ros-jazzy-pluginlib,
+    ros-jazzy-rclcpp,
+    ros-jazzy-rclcpp-components,
+    ros-jazzy-tf2,
+    ros-jazzy-tf2-eigen,
+    ros-jazzy-tf2-geometry-msgs,
+    ros-jazzy-tf2-kdl,
+    ros-jazzy-trac-ik-lib,
+    ros-jazzy-visualization-msgs
 Homepage: 
 Standards-Version: 3.9.2
 
-Package: ros-humble-trac-ik-kinematics-plugin
+Package: ros-jazzy-trac-ik-kinematics-plugin
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libnlopt-dev, libnlopt0, ros-humble-moveit-core, ros-humble-pluginlib, ros-humble-rclcpp, ros-humble-tf2, ros-humble-tf2-eigen, ros-humble-tf2-geometry-msgs, ros-humble-tf2-kdl, ros-humble-trac-ik-lib, ros-humble-visualization-msgs
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    libnlopt-dev,
+    libnlopt0,
+    ros-jazzy-moveit-core,
+    ros-jazzy-pluginlib,
+    ros-jazzy-rclcpp,
+    ros-jazzy-tf2,
+    ros-jazzy-tf2-eigen,
+    ros-jazzy-tf2-geometry-msgs,
+    ros-jazzy-tf2-kdl,
+    ros-jazzy-trac-ik-lib,
+    ros-jazzy-visualization-msgs
 Description: A MoveIt! Kinematics plugin using TRAC-IK

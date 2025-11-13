@@ -1,12 +1,21 @@
-Source: ros-humble-rvc-messages
+Source: ros-jazzy-rvc-messages
 Section: misc
 Priority: optional
 Maintainer: Intel Robotics Team <robotics@intel.com>
-Build-Depends: debhelper (>= 9.0.0), ros-humble-ament-cmake, ros-humble-ament-lint-auto <!nocheck>, ros-humble-ament-lint-common <!nocheck>, ros-humble-geometry-msgs, ros-humble-rosidl-default-generators, ros-humble-std-msgs
+Build-Depends: debhelper (>= 9.0.0),
+  ros-jazzy-ament-cmake,
+  ros-jazzy-ament-lint-auto <!nocheck>,
+  ros-jazzy-ament-lint-common <!nocheck>,
+  ros-jazzy-geometry-msgs,
+  ros-jazzy-rosidl-default-generators,
+  ros-jazzy-std-msgs
 Homepage: 
 Standards-Version: 3.9.2
 
-Package: ros-humble-rvc-messages
+Package: ros-jazzy-rvc-messages
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ros-humble-geometry-msgs, ros-humble-rosidl-default-runtime, ros-humble-std-msgs
+Depends: ${shlibs:Depends}, ${misc:Depends}, 
+  ros-jazzy-geometry-msgs,
+  ros-jazzy-rosidl-default-runtime,
+  ros-jazzy-std-msgs
 Description: RVC vision interface messages

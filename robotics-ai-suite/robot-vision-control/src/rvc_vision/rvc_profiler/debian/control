@@ -1,12 +1,12 @@
-Source: ros-humble-rvc-profiler
+Source: ros-jazzy-rvc-profiler
 Section: misc
 Priority: optional
 Maintainer: Intel Robotics Team <robotics@intel.com>
-Build-Depends: debhelper (>= 9.0.0), nlohmann-json3-dev, ros-humble-ament-cmake, ros-humble-ament-index-cpp, ros-humble-ament-lint-auto <!nocheck>, ros-humble-ament-lint-common <!nocheck>, ros-humble-image-transport, ros-humble-rclcpp, ros-humble-rclcpp-components, ros-humble-rvc-messages, ros-humble-rvc-vision-messages, ros-humble-sensor-msgs
+Build-Depends: debhelper (>= 9.0.0), nlohmann-json3-dev, ros-jazzy-ament-cmake, ros-jazzy-ament-index-cpp, ros-jazzy-ament-lint-auto <!nocheck>, ros-jazzy-ament-lint-common <!nocheck>, ros-jazzy-image-transport, ros-jazzy-rclcpp, ros-jazzy-rclcpp-components, ros-jazzy-rvc-messages, ros-jazzy-rvc-vision-messages, ros-jazzy-sensor-msgs
 Homepage: 
 Standards-Version: 3.9.2
 
-Package: ros-humble-rvc-profiler
+Package: ros-jazzy-rvc-profiler
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ros-humble-image-transport, ros-humble-rclcpp, ros-humble-rclcpp-components
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-jazzy-image-transport, ros-jazzy-rclcpp, ros-jazzy-rclcpp-components
 Description: Node to gather various statistics of RVC
