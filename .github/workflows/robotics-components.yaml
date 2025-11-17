@@ -51,4 +51,4 @@ jobs:
     name: "Multi-Camera Demo"
     needs: check-changes
     if: ${{ needs.check-changes.outputs.multicam-demo-changed == 'true' }}
-    uses: "./.github/workflows/robotics-components-its-planner.yaml"
+    uses: "./.github/workflows/robotics-components-multicam-demo.yaml"
