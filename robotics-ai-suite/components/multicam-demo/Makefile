@@ -49,7 +49,7 @@ DOCKER_RUN_PARAMS= \
 # Targets
 #----------------------------------------------------------------------------------------------------------------------
 default: demo
-.PHONY: default license-check lint lint-all lint-python lint-yaml lint-githubactions lint-bash lint-json lint-markdown image test package source-package models yolov8_models mobilenet_models demo bash clean source-package
+.PHONY: default license-check lint lint-all lint-python lint-yaml lint-githubactions lint-bash lint-json lint-markdown image test package source-package models yolov8_models mobilenet_models demo bash clean
 
 license-check:
 	@# Help: Perform a REUSE license check using docker container https://hub.docker.com/r/fsfe/reuse
