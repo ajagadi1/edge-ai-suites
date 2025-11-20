@@ -77,10 +77,11 @@ cd edge-ai-suites/manufacturing-ai-suite/industrial-edge-insights-time-series
 >   logs for OPC-UA ingestion after a single data ingestion loop. This message can be ignored.
 > - `make up_opcua_ingestion` is supported only for `Wind Turbine Anomaly Detection` sample app
 
-:hidden:
+<!--hide_directive
 ::::{tab-set}
 :::{tab-item} **Wind Turbine Anomaly Detection**
 :sync: tab1
+hide_directive-->
 
 - **Using OPC-UA ingestion**:
 
@@ -94,10 +95,11 @@ cd edge-ai-suites/manufacturing-ai-suite/industrial-edge-insights-time-series
    make up_mqtt_ingestion app="wind-turbine-anomaly-detection"
    ```
 
-:hidden:
+<!--hide_directive
 :::
 :::{tab-item} **Weld Anomaly Detection**
 :sync: tab2
+hide_directive-->
 
 ```bash
 make up_mqtt_ingestion app="weld-anomaly-detection"
@@ -113,10 +115,11 @@ Multi-stream ingestion enables the simultaneous processing of multiple data stre
 To activate multi-stream ingestion, set the `num_of_streams` parameter to the required number of parallel streams when deploying the application.
 `<NUMBER_OF_STREAMS>`: Specify the number of parallel streams to run (e.g., `3` for three concurrent streams).
 
-:hidden:
+<!--hide_directive
 ::::{tab-set}
 :::{tab-item} **Wind Turbine Anomaly Detection**
 :sync: tab1
+hide_directive-->
 
 ```bash
 # Deploy with OPC-UA Multi-Stream Ingestion
@@ -126,10 +129,11 @@ make up_opcua_ingestion app="wind-turbine-anomaly-detection" num_of_streams=<NUM
 make up_mqtt_ingestion app="wind-turbine-anomaly-detection" num_of_streams=<NUMBER_OF_STREAMS>
 ```
 
+<!--hide_directive
 :::
-:hidden:
 :::{tab-item} **Weld Anomaly Detection**
 :sync: tab2
+hide_directive-->
 
 ```bash
 # Deploy with MQTT Multi-Stream Ingestion
@@ -171,10 +175,11 @@ To trigger the UDF inference on `GPU` in Time Series Analytics Microservice, run
 
 ## Verify the Output Results
 
-:hidden:
+<!--hide_directive
 ::::{tab-set}
 :::{tab-item} **Wind Turbine Anomaly Detection**
 :sync: tab1
+hide_directive-->
 
 1. Get into the InfluxDB* container:
 
@@ -224,10 +229,11 @@ To trigger the UDF inference on `GPU` in Time Series Analytics Microservice, run
 
      ![Anomaly prediction in grid active power](./_images/anomaly_power_prediction.png)
 
+<!--hide_directive
 :::
-:hidden:
 :::{tab-item} **Weld Anomaly Detection**
 :sync: tab2
+hide_directive-->
 
 1. Get into the InfluxDB* container:
 
