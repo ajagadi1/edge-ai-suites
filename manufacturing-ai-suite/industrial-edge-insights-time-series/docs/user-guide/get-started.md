@@ -77,6 +77,7 @@ cd edge-ai-suites/manufacturing-ai-suite/industrial-edge-insights-time-series
 >   logs for OPC-UA ingestion after a single data ingestion loop. This message can be ignored.
 > - `make up_opcua_ingestion` is supported only for `Wind Turbine Anomaly Detection` sample app
 
+:hidden:
 ::::{tab-set}
 :::{tab-item} **Wind Turbine Anomaly Detection**
 :sync: tab1
@@ -93,6 +94,7 @@ cd edge-ai-suites/manufacturing-ai-suite/industrial-edge-insights-time-series
    make up_mqtt_ingestion app="wind-turbine-anomaly-detection"
    ```
 
+:hidden:
 :::
 :::{tab-item} **Weld Anomaly Detection**
 :sync: tab2
@@ -111,6 +113,7 @@ Multi-stream ingestion enables the simultaneous processing of multiple data stre
 To activate multi-stream ingestion, set the `num_of_streams` parameter to the required number of parallel streams when deploying the application.
 `<NUMBER_OF_STREAMS>`: Specify the number of parallel streams to run (e.g., `3` for three concurrent streams).
 
+:hidden:
 ::::{tab-set}
 :::{tab-item} **Wind Turbine Anomaly Detection**
 :sync: tab1
@@ -124,6 +127,7 @@ make up_mqtt_ingestion app="wind-turbine-anomaly-detection" num_of_streams=<NUMB
 ```
 
 :::
+:hidden:
 :::{tab-item} **Weld Anomaly Detection**
 :sync: tab2
 
@@ -167,6 +171,7 @@ To trigger the UDF inference on `GPU` in Time Series Analytics Microservice, run
 
 ## Verify the Output Results
 
+:hidden:
 ::::{tab-set}
 :::{tab-item} **Wind Turbine Anomaly Detection**
 :sync: tab1
@@ -220,6 +225,7 @@ To trigger the UDF inference on `GPU` in Time Series Analytics Microservice, run
      ![Anomaly prediction in grid active power](./_images/anomaly_power_prediction.png)
 
 :::
+:hidden:
 :::{tab-item} **Weld Anomaly Detection**
 :sync: tab2
 
