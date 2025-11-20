@@ -105,8 +105,10 @@ hide_directive-->
 make up_mqtt_ingestion app="weld-anomaly-detection"
 ```
 
+<!--hide_directive
 :::
 ::::
+hide_directive-->
 
 ### Multi-Stream Ingestion support
 
@@ -140,8 +142,10 @@ hide_directive-->
 make up_mqtt_ingestion app="weld-anomaly-detection" num_of_streams=<NUMBER_OF_STREAMS>
 ```
 
+<!--hide_directive
 :::
 ::::
+hide_directive-->
 
 #### Notes
 
@@ -283,8 +287,10 @@ hide_directive-->
 
      ![Anomaly prediction in weld sensor data](./_images/anomaly_detection_weld.png)
 
+<!--hide_directive
 :::
 ::::
+hide_directive-->
 
 ## Bring down the sample app
 
