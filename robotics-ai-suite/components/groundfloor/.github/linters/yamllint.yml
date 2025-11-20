@@ -10,6 +10,3 @@ rules:
   comments: disable
   comments-indentation: disable
   line-length: disable
-
-ignore: |
-  **/pointcloud_groundfloor_segmentation/test/data
