@@ -94,9 +94,6 @@ spec:
       - name: nginx-reverse-proxy
         image: {{ .Values.nginx.image }}:{{ .Values.nginx.imageTag }}
         imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: {{ .Values.config.nginx.int.http_port }}
-        - containerPort: {{ .Values.config.nginx.int.https_port }}
         securityContext:
           allowPrivilegeEscalation: false
           runAsNonRoot: true
@@ -106,6 +103,9 @@ spec:
             drop:
               - ALL
           readOnlyRootFilesystem: true
+        ports:
+        - containerPort: {{ .Values.config.nginx.int.http_port }}
+        - containerPort: {{ .Values.config.nginx.int.https_port }}
         env:
         - name: http_proxy
           value: {{ $.Values.env.http_proxy }}

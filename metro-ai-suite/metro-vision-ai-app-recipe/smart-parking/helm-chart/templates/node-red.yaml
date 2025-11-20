@@ -15,9 +15,22 @@ spec:
       labels:
         app: node-red
     spec:
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
       - name: intel-plugin-downloader
         image: curlimages/curl:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+              - ALL
+          readOnlyRootFilesystem: true
         command:
         - /bin/sh
         - -c
@@ -48,6 +61,8 @@ spec:
         - name: node-red-flows-config
           mountPath: /tmp/flows.json
           subPath: flows.json
+        - name: tmp
+          mountPath: /tmp
       containers:
       - name: node-red
         image: {{ $.Values.node_red.image }}:{{ $.Values.node_red.imageTag }}
@@ -64,16 +79,31 @@ spec:
         - name: no_proxy
           value: "{{ $.Values.env.no_proxy }},{{ $.Values.env.HOST_IP }}"
         securityContext:
-          runAsUser: 0  # root user
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+              - ALL
+          readOnlyRootFilesystem: true
         volumeMounts:
         - name: node-red-data
           mountPath: /data
+        - name: node-red-src
+          mountPath: /usr/src/node-red
+        - name: tmp
+          mountPath: /tmp
       volumes:
       - name: node-red-data
         emptyDir: {}
       - name: node-red-flows-config
         configMap:
-          name: node-red-flows-config 
+          name: node-red-flows-config
+      - name: node-red-src
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {} 
 ---
 apiVersion: v1
 kind: Service
