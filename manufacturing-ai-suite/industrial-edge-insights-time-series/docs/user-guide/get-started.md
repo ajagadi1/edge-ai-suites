@@ -119,7 +119,7 @@ To activate multi-stream ingestion, set the `num_of_streams` parameter to the re
 
 <!--hide_directive
 ::::{tab-set}
-:::{tab-item} **Wind Turbine Anomaly Detection**
+:::{tab-item} hide_directive-->**Wind Turbine Anomaly Detection**<!--hide_directive
 :sync: tab1
 hide_directive-->
 
