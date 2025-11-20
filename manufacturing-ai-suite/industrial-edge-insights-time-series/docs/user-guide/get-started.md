@@ -98,7 +98,8 @@ hide_directive-->
 
 <!--hide_directive
 :::
-:::{tab-item} hide_directive-->**Weld Anomaly Detection**<!--hide_directive
+:::{tab-item} hide_directive-->**Weld Anomaly Detection**
+<!--hide_directive
 :sync: tab2
 hide_directive-->
 
@@ -120,7 +121,8 @@ To activate multi-stream ingestion, set the `num_of_streams` parameter to the re
 
 <!--hide_directive
 ::::{tab-set}
-:::{tab-item} hide_directive-->**Wind Turbine Anomaly Detection**<!--hide_directive
+:::{tab-item} hide_directive-->**Wind Turbine Anomaly Detection**
+<!--hide_directive
 :sync: tab1
 hide_directive-->
 
@@ -134,7 +136,8 @@ make up_mqtt_ingestion app="wind-turbine-anomaly-detection" num_of_streams=<NUMB
 
 <!--hide_directive
 :::
-:::{tab-item} hide_directive-->**Weld Anomaly Detection**<!--hide_directive
+:::{tab-item} hide_directive-->**Weld Anomaly Detection**
+<!--hide_directive
 :sync: tab2
 hide_directive-->
 
@@ -182,7 +185,8 @@ To trigger the UDF inference on `GPU` in Time Series Analytics Microservice, run
 
 <!--hide_directive
 ::::{tab-set}
-:::{tab-item} hide_directive-->**Wind Turbine Anomaly Detection**<!--hide_directive
+:::{tab-item} hide_directive-->**Wind Turbine Anomaly Detection**
+<!--hide_directive
 :sync: tab1
 hide_directive-->
 
@@ -236,7 +240,8 @@ hide_directive-->
 
 <!--hide_directive
 :::
-:::{tab-item} hide_directive-->**Weld Anomaly Detection**<!--hide_directive
+:::{tab-item} hide_directive-->**Weld Anomaly Detection**
+<!--hide_directive
 :sync: tab2
 hide_directive-->
 
