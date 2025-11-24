@@ -4,7 +4,11 @@
 - dTPM module must be physically connected to the PTL Board
 - Recommended: Infineon TPM (Xenon_4.1.0) for optimal Smart Intersection compatibility
 
+<<<<<<< HEAD
 ## Step 1: Download Required Components
+=======
+## Step 1: Download Required Components**
+>>>>>>> 85531bc1 (divided the Security Enablement article into smaller articles)
 
  Download IFWI Firmware
 
@@ -22,7 +26,11 @@
     - Extract the downloaded zip file
     - "mfi.exe" will be located under "Intel_Silicon_FW_Kit_PTL-H12Xe_ES1_ES2_2025WW41.2.02\Tools\System_Tools\MFIT\Windows64"
 
+<<<<<<< HEAD
 ## Step 2: Configure IFWI with dTPM Support
+=======
+## Step 2: Configure IFWI with dTPM Support**
+>>>>>>> 85531bc1 (divided the Security Enablement article into smaller articles)
 
 1. **Launch MFIT Tool**: Execute `mfit.exe` and wait for the application to fully load.
 
@@ -44,7 +52,11 @@ modul
 
 ![dTPM Configuration Settings](../_images/security_dtpm_configuration_settings.png)
 
+<<<<<<< HEAD
 ## Step 3: Flash the Modified IFWI
+=======
+## Step 3: Flash the Modified IFWI**
+>>>>>>> 85531bc1 (divided the Security Enablement article into smaller articles)
 
 > **Important**: Power OFF the PTL board before flashing
 
