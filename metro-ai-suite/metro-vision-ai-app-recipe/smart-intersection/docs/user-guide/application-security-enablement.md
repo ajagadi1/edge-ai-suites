@@ -29,3 +29,11 @@ With these security features enabled, your **Smart Intersection** application wi
 - **Trusted Compute**: Isolated execution environment for video analytics pipelines with enhanced security
 
 This comprehensive security implementation ensures that your Smart Intersection system can safely process traffic data, store sensitive configurations, and operate in trusted environments with multiple layers of protection.
+
+.. toctree::
+
+   security_features/enable_dtpm
+   security_features/enable_full_disk_install
+   security_features/enable_uefi
+   security_features/enable_tme
+   security_features/enable_trusted_compute
