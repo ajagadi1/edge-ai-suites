@@ -5,6 +5,7 @@ This document provides instructions on how to run performance benchmarks for the
 ## Prerequisites
 
 - The `edge-ai-suites` repository must be cloned to your system.
+- Ensure additional dependencies `ffmpeg` and `gawk` are installed alongwith Sample Apps prerequisites.
 
 ## Step 1: Understand the Benchmarking Script
 
@@ -54,7 +55,7 @@ inference-region=1 inference-interval=3 batch-size=8 nireq=2 ie-config="GPU_THRO
 
 ## Step 2: Prepare for Benchmarking
 
-1.  **Set Up and Start the Application:** Before running the benchmark, you must set up and start the desired application (e.g., Loitering Detection). This ensures all services, including the DL Streamer Pipeline Server, are running and available. For setup instructions, please refer to the `get-started.md` guide located in the specific application's documentation folder (e.g., `loitering-detection/docs/user-guide/`).
+1.  **Set Up and Start the Application:** Before running the benchmark, you must set up and start the desired application (e.g., Loitering Detection). This ensures all services, including the DL Streamer Pipeline Server, are running and available. For setup instructions, please refer to the `get-started.md` guide located in the specific application's documentation folder (e.g., `loitering-detection/docs/user-guide/`). Ensure additional dependencies `ffmpeg` and `gawk` are installed.
 
 2.  **Navigate to Script Directory:** Open a terminal and navigate to the `metro-vision-ai-app-recipe` directory.
 
