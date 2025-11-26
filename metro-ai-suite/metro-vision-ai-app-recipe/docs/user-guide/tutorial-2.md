@@ -161,8 +161,8 @@ Add a function node to enhance the AI inference data with custom metadata:
 
 ```javascript
 // Extract license, color, and type from msg.payload
-// Skip objects missing any required attribute
-// Uses payload.metadata.objects and parses JSON if needed
+// Skip frames that don't have all required attributes
+// Uses payload.metadata.objects and parses JSON
 
 // Parse JSON if payload is a string
 if (typeof msg.payload === "string") {
@@ -189,9 +189,9 @@ let extractedData = [];
 // Process each object in metadata.objects
 for (let obj of msg.payload.metadata.objects) {
 
-    // Strict completeness: all 3 attributes must exist
+    // All attributes must exist
     if (!obj.license_plate || !obj.color || !obj.type) {
-        continue; // Skip incomplete objects
+        continue; // Skip this object if missing any attribute
     }
 
     let extractedObj = {
@@ -199,7 +199,7 @@ for (let obj of msg.payload.metadata.objects) {
         color: obj.color.label || null,
         type: obj.type.label || null,
 
-        // Confidence fields for license + color + type
+        // Confidence fields
         license_confidence: obj.license_plate.confidence || null,
         color_confidence: obj.color.confidence || null,
         type_confidence: obj.type.confidence || null
@@ -213,7 +213,7 @@ if (extractedData.length === 0) {
     return null;
 }
 
-// Return extracted data
+// Return the extracted data
 msg.payload = extractedData;
 return msg;
 ```
