@@ -6,9 +6,9 @@
 Model Predictive Control Demo
 #############################
 
-Model predictive control (MPC) is an advanced method of process control that is used to control a process while satisfying a set of constraints. Model predictive controllers rely on dynamic models of the process, most often linear empirical models obtained by system identification. The main advantage of MPC is the fact that it allows the current timeslot to be optimized, while keeping future timeslots in account. Also MPC has the ability to anticipate future events and can take control actions accordingly. These features can benefit current model-based robotics control in Perception-Action frequency gap, unsmoothness of generated trajectories, and potential collision.
+Model predictive control (MPC) is an advanced method of process control that is used to control a process while satisfying a set of constraints. Model predictive controllers rely on dynamic models of the process, most often linear empirical models obtained by system identification. The main advantage of MPC is the fact that it allows the current timeslot to be optimized, while keeping future timeslots in account. Also MPC has the ability to anticipate future events and can take control actions accordingly. These features can benefit the current model-based robotics control in the Perception-Action frequency gap, unsmoothness of generated trajectories, and potential collision.
  
-Here, we adopted an open-source MPC project named Optimal Control for Switched Systems (OCS2) and built a complete pipeline consisting of AI reference model(ACT), MPC(OCS2), and simulation(MUJOCO). The picture below shows the ROS node/topic graph of this demo with three modules: ACT AI model module (marked as red), OCS2 MPC optimization module (marked as green), and Mujoco simulation module (marked as blue).
+Here, we adopted an open-source MPC project named Optimal Control for Switched Systems (OCS2) and built a complete pipeline consisting of AI reference model (ACT), MPC(OCS2), and simulation(MUJOCO). The picture below shows the ROS node/topic graph of this demo with three modules: ACT AI model module (marked as red), OCS2 MPC optimization module (marked as green), and Mujoco simulation module (marked as blue).
 
 .. image:: assets/images/mpc-ros-graph.jpg
    :width: 85%
@@ -22,7 +22,7 @@ Please make sure you have finished setup steps in :doc:`../installation_setup`.
 ACT setup
 =========
 
-First, please follow the ACT installation guide in :doc:`./imitation_learning_act`. Then, after installing and validating ACT, you need to install rclpy in act virtual environment additionally.
+First, please follow the ACT installation guide in :doc:`./imitation_learning_act`. Then, after installing and validating ACT, you need to install rclpy in the ACT virtual environment additionally.
 
    .. code-block:: bash
 
@@ -33,7 +33,7 @@ First, please follow the ACT installation guide in :doc:`./imitation_learning_ac
 OCS2 setup
 ==========
 
-Here, we adopted and modified the `open-source project OCS2 <https://github.com/leggedrobotics/ocs2>`_ as the MPC module. OCS2 is a C++ toolbox tailored for Optimal Control for Switched Systems (OCS2). It provides an efficient implementation of Continuous-time domain constrained DDP (SLQ) and many other helpful algorithms. To facilitate the application of OCS2 in robotic tasks, it provides the user with additional tools to set up the system dynamics (such as kinematic or dynamic models) and cost/constraints (such as self-collision avoidance and end-effector tracking) from a URDF model. Your can go to `OCS2 official web <https://leggedrobotics.github.io/ocs2/overview.html>`_ for more details.
+Here, we adopted and modified the `open-source project OCS2 <https://github.com/leggedrobotics/ocs2>`_ as the MPC module. OCS2 is a C++ toolbox tailored for Optimal Control for Switched Systems (OCS2). It provides an efficient implementation of Continuous-time domain constrained DDP (SLQ) and many other helpful algorithms. To facilitate the application of OCS2 in robotic tasks, it provides the user with additional tools to set up the system dynamics (such as kinematic or dynamic models) and cost/constraints (such as self-collision avoidance and end-effector tracking) from a URDF model. You can go to `OCS2 official web <https://leggedrobotics.github.io/ocs2/overview.html>`_ for more details.
 
 It should be noted that the original OCS2 project is based on ROS1 Noetic, while we migrate it to ROS2 humble and enable it on ACT Aloha.
 
@@ -78,7 +78,7 @@ Install OCS2
 
 3. Download ocs2 and ocs2_robotic_assets
 
-Download `ocs2 <https://github.com/open-edge-platform/edge-ai-suites/tree/main/robotics-ai-suite/pipelines/mpc_demo/ocs2>`_ and `ocs2_robotic_assets <https://github.com/open-edge-platform/edge-ai-suites/tree/main/robotics-ai-suite/pipelines/mpc_demo/ocs2_robotic_assets>`_ with ``git clone --recursive``. Then, initialize submodules and apply patches:
+Download `ocs2 <https://github.com/open-edge-platform/edge-ai-suites/tree/main/robotics-ai-suite/pipelines/mpc-demo/ocs2>`_ and `ocs2_robotic_assets <https://github.com/open-edge-platform/edge-ai-suites/tree/main/robotics-ai-suite/pipelines/mpc-demo/ocs2_robotic_assets>`_ with ``git clone --recursive``. Then, initialize submodules and apply patches:
 
    .. code-block:: bash
 
@@ -120,7 +120,7 @@ Here, we adopted and modified the open-source Mujoco Plugin project `MujocoRosUt
 
 2. Download MujocoRosUtils:
 
-Download `mujoco_ros_utils <https://github.com/AnnikaWU/edge-ai-suites/tree/main/robotics-ai-suite/pipelines/mpc_demo/mujoco_ros_utils>`_ with ``git clone --recursive``. Then, initialize submodules and apply patches:
+Download `mujoco_ros_utils <https://github.com/open-edge-platform/edge-ai-suites/tree/main/robotics-ai-suite/pipelines/mpc-demo/mujoco_ros_utils>`_ with ``git clone --recursive``. Then, initialize submodules and apply patches:
 
    .. code-block:: bash
       
@@ -174,7 +174,7 @@ If launching successfully, the OCS2 terminal will print out information indicati
    
    .. note::
 
-      You need to download our pre-trained ACT weights of transmiting cube task and set the argument ``--ckpt_dir`` to the path of the pre-trained weights.
+      You need to download our pre-trained ACT weights of transmitting cube task and set the argument ``--ckpt_dir`` to the path of the pre-trained weights.
 
    .. code-block:: bash
       
