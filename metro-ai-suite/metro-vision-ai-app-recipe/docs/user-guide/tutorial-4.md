@@ -25,42 +25,20 @@ This architecture is capable of building any typical Vision AI sample applicatio
 
 The below aspects need to be updated accordingly, in order to leverage an existing 'Metro Vision AI App Recipe powered application' and turn it into a 'new application' by 'vibe coding':
 
-- Vision Analytics Pipeline: This is the AI processing DL Streamer pipeline that needs to be modified appropriately, considering the new AI model and new video source input.
-- Node Red Business Logic: This is the business logic that runs on the vision analytics pipeline output. This decides what post-processing happens on the vision analytics pipeline output, the result of which would be provided as insights in the grafana dashboard. This is where 'vibe coding' comes into play. We will interact with Claude Sonnet 4.5 in the github copilot offering.
+- **AI model:** This is the new AI model that serves the inference purposes of the new application.
+- **Video file:** This is the new video source that serves as input to the new application.
+- **Vision Analytics Pipeline:** This is the AI processing DL Streamer pipeline that needs to be modified appropriately, considering the new AI model and new video source input.
+- **Node Red Business Logic:** This is the business logic that runs on the vision analytics pipeline output. This decides what post-processing happens on the vision analytics pipeline output, the result of which would be provided as insights in the grafana dashboard. This is where 'vibe coding' comes into play. We will interact with Claude Sonnet 4.5 in the github copilot offering.
+- **Configuration updates:** This is the application configuration such as self signed certificates, docker compose, node-red, grafana etc.,
+
+Note: The underlying application architecture remains the same.
 
 ## Build a new application: 'AI Crowd Analytics' 
- Now let's
+ 
+ Now let us get started with building a new 'AI Crowd Analytics' application that automatically detects vehicles and identifies whether they form a "crowd" (closely grouped vehicles) or are scattered individually. The system leverages Intel's DLStreamer framework with pre-trained AI models to process video streams and analyze vehicle clustering patterns in real-time.
 
+We will leverage the 'Smart Parking' application as the existing 'Metro Vision AI App Recipe powered application' and turn it into a 'AI Crowd Analytics' application.
 
-
-By following this guide, you will learn how to:
-- **Set up the Crowd Analytics Application**: Create a new application based on the Smart Parking template and configure it for crowd detection use cases
-- **Download and Configure AI Models**: Install YOLO object detection models and custom vehicle classification models
-- **Configure Video Processing Pipeline**: Set up the DLStreamer pipeline for real-time vehicle detection and crowd analysis
-- **Deploy and Run the System**: Launch the containerized application and monitor crowd detection performance
-
-## Prerequisites
-
-- Verify that your system meets the [minimum system requirements](./system-requirements.md) for running edge AI applications
-- Install Docker: [Docker Installation Guide](https://docs.docker.com/get-docker/)
-- Enable running Docker without "sudo": [Post-installation steps for Linux](https://docs.docker.com/engine/install/linux-postinstall/)
-- Ensure you have at least 8GB of available disk space for AI models and video files
-- Basic understanding of containerized applications and video processing concepts
-
-## Application Architecture Overview
-
-![Crowd Analytics System Diagram](_images/metro-vision-ai-app-recipe-architecture.drawio.svg)
-
-
-The AI Crowd Analytics system consists of several key components:
-- **Video Input**: Processes live camera feeds or video files from parking lot cameras
-- **Vehicle Detection**: Uses YOLO11s model to detect and track vehicles in the parking lot
-- **Vehicle Tracking**: Maintains consistent vehicle identification across video frames
-- **Crowd Detection Algorithm**: Analyzes vehicle positions using Euclidean distance calculations in Node-RED to identify clusters
-- **Data Processing**: Determines whether detected vehicles form a "crowd" (closely grouped) or are scattered individually
-- **Real-time Analytics**: Provides live updates on crowd formation and dispersal patterns
-
-## Set up and First Use
 
 ### 1. **Create the Crowd Analytics Application Directory**
 
@@ -71,11 +49,7 @@ cd ./edge-ai-suites/metro-ai-suite/metro-vision-ai-app-recipe
 cp -r smart-parking/ crowd-analytics/
 ```
 
-This creates a new `crowd-analytics` directory with all the necessary application structure and configuration files.
-
 ### 2. **Download Sample Video File**
-
-Download a sample video file containing vehicle traffic for testing the AI tolling system:
 
 ```bash
 mkdir -p ./crowd-analytics/src/dlstreamer-pipeline-server/videos/
@@ -98,8 +72,6 @@ The sample video contains:
 
 ### 3. **Download and Setup AI Models**
 
-Create and run the model download script to install all required AI models:
-
 ```bash
 docker run --rm --user=root \
   -e http_proxy -e https_proxy -e no_proxy \
@@ -112,8 +84,6 @@ mkdir -p crowd-analytics/src/dlstreamer-pipeline-server/models/public
 export MODELS_PATH=/home/dlstreamer/metro-suite/crowd-analytics/src/dlstreamer-pipeline-server/models
 /home/dlstreamer/dlstreamer/samples/download_public_models.sh yolo11s coco128
 
-# mkdir -p crowd-analytics/src/dlstreamer-pipeline-server/models/intel
-
 echo "Fix ownership..."
 chown -R "$(id -u):$(id -g)" crowd-analytics/src/dlstreamer-pipeline-server/models crowd-analytics/src/dlstreamer-pipeline-server/videos 2>/dev/null || true
 EOF
@@ -122,24 +92,10 @@ EOF
 
 The installation script downloads and sets up essential AI models:
 
-| **Model Name** | **Purpose** | **Framework** | **Size** |
-|----------------|-------------|---------------|----------|
-| YOLO11s | Vehicle detection and localization | PyTorch/OpenVINO | ~65MB |
+| **Model Name** | **Purpose** | **Framework** |
+|----------------|-------------|---------------|
+| YOLO11s | Vehicle detection and localization | PyTorch/OpenVINO |
 
-<details>
-<summary>
-Model Download Process Details
-</summary>
-
-The installation script performs the following operations:
-1. Creates the required directory structure under `src/dlstreamer-pipeline-server/models/`
-2. Runs a DLStreamer container to access model download tools
-3. Downloads public YOLO models using the built-in download scripts
-4. Sets up proper file permissions for container access
-
-Expected download time: 5-10 minutes depending on internet connection.
-
-</details>
 
 ### 4. **Configure the AI Processing Pipeline**
 
@@ -180,7 +136,7 @@ Pipeline Configuration Explanation
 </summary>
 The GStreamer pipeline configuration defines the crowd analytics AI processing workflow:
 
-- **Source**: Accepts video input from parking lot camera feeds or video files
+- **Source**: Accepts video input from parking lot video file
 - **Decode**: Converts video format to raw frames for processing  
 - **gvaattachroi**: Defines a region of interest (ROI) with coordinates thus improving performance by processing only the relevant portion of the frame
 - **gvadetect**: Runs the YOLO11s object detection model (FP16 optimized) on CPU to identify and locate vehicles in each frame
@@ -229,143 +185,11 @@ cp compose-without-scenescape.yml docker-compose.yml
 docker compose up -d
 ```
 
-The deployment process will:
-- Pull required container images
-- Start the DLStreamer pipeline server
-- Initialize the Node-RED flow management
-- Launch the Grafana dashboard
-- Set up the MQTT message broker
+### 7. **Customize Node-RED Business Logic**
 
-## Validation and Expected Results
+The following steps guide you through customizing Node-RED flows to implement crowd analytics logic for vehicle detection data. You'll learn how to connect to MQTT data streams from the crowd analytics pipeline, calculate vehicle proximities using Euclidean distances, detect crowd formations (clusters of vehicles in close proximity), and create enhanced analytics outputs.
 
-### 1. **Verify Service Status**
-
-Check that all services are running correctly:
-
-```bash
-docker ps
-```
-
-Expected output should show containers for:
-- `dlstreamer-pipeline-server`
-- `node-red`
-- `grafana`
-- `mosquitto` (MQTT broker)
-- `nginx` (reverse proxy)
-### 2. **Access the Application Interface**
-
-Open your web browser and navigate to:
-- **Main Dashboard**: `https://<HOST_IP>/grafana` (Grafana)
-    - Username: admin
-    - Password: admin
-- **Node-RED Flow Editor**: `https://<HOST_IP>/nodered/`
-
-### 3. **Test Video Processing**
-
-Start the AI pipeline and process the sample video:
-
-```bash
-# Start the crowd analytics pipeline with the sample video
-curl -k -s https://localhost/api/pipelines/user_defined_pipelines/yolov11s_crowd_analytics -X POST -H 'Content-Type: application/json' -d '
-{
-    "source": {
-        "uri": "file:///home/pipeline-server/videos/easy1.mp4",
-        "type": "uri"
-    },
-    "destination": {
-        "metadata": {
-            "type": "mqtt",
-            "topic": "object_detection_1",
-            "timeout": 1000
-        },
-        "frame": {
-            "type": "webrtc",
-            "peer-id": "object_detection_1"
-        }
-    },
-    "parameters": {
-        "detection-device": "CPU"
-    }
-}'
-```
-
-### 4. **View Live Video Stream**
-
-Access the processed video stream with AI annotations through WebRTC:
-
-```bash
-# Open in your web browser (replace <HOST_IP> with your actual IP address)
-# For local testing, typically use localhost or 127.0.0.1
-https://<HOST_IP>/mediamtx/object_detection_1/
-```
-
-For local testing, you can use: `https://localhost/mediamtx/object_detection_1/`
-
-![Crowd Analytics Live Detection](_images/crowd_analytics_detection.png)
-
-Expected results:
-- Accurate vehicle detection in parking lot scenario
-- Real-time vehicle tracking with consistent IDs across frames
-
-## Troubleshooting
-
-### 1. **Container Startup Issues**
-
-If containers fail to start:
-```bash
-# Check container logs for specific errors
-docker logs <container_name>
-
-# Common issues:
-# - Port conflicts: Ensure ports 3000, 1880, 8080 are available
-# - Permission issues: Verify Docker permissions
-# - Resource constraints: Check available memory and disk space
-```
-
-### 2. **Pipeline Processing Errors**
-
-If video processing fails or shows poor accuracy:
-```bash
-# Check pipeline server logs
-docker logs dlstreamer-pipeline-server
-
-# Verify model files are properly installed
-ls -la ./crowd-analytics/src/dlstreamer-pipeline-server/models/
-
-# Test with different video source
-# Replace the video file with a different sample
-```
-
-### 3. **Performance Issues**
-
-For slow processing or high CPU usage:
-- **Reduce video resolution**: Use lower resolution input videos
-- **Adjust inference device**: Change from CPU to GPU if available
-- **Optimize pipeline**: Reduce queue sizes or disable unnecessary features
-
--------------------------------
-
-# Customizing Node-RED Flows for Crowd Analytics Applications
-
-The following steps guides you through customizing Node-RED flows to implement crowd analytics logic for vehicle detection data. You'll learn how to connect to MQTT data streams from the crowd analytics pipeline, calculate vehicle proximities using Euclidean distances, detect crowd formations (clusters of vehicles in close proximity), and create enhanced analytics outputs.
-
-
-By following these steps, you will learn how to:
-- **Access and Launch Node-RED**: Connect to the Node-RED interface and understand the flow-based programming environment
-- **Clear and Reset Flows**: Remove existing flows and start with a clean workspace for custom development
-- **Connect to MQTT Data Streams**: Establish connections to receive real-time AI inference data from metro vision applications
-- **Implement Custom Data Processing**: Add custom names, metadata, and business logic to AI inference results using function nodes
-- **Publish Enhanced Data**: Send processed data back to MQTT topics for consumption by other applications
-
-## Prerequisites
-
-- Complete the previous steps mentioned above to have a running crowd analytics application
-- Verify that your crowd analytics application is running and producing MQTT vehicle detection data
-- Basic understanding of Node-RED flow-based programming concepts
-- Familiarity with MQTT messaging protocol and JSON data structures
-- Web browser access to the Node-RED interface
-
-## Crowd Analytics Flow Architecture Overview
+#### 7.1 **Business Logic Overview**
 
 The custom Node-RED flow implements crowd detection algorithms:
 - **MQTT Input Node**: Subscribes to vehicle detection data from YOLO11s pipeline
@@ -375,16 +199,7 @@ The custom Node-RED flow implements crowd detection algorithms:
 - **Analytics Generator**: Creates crowd metrics, density maps, crowd length measurements, and alerts
 - **MQTT Output Node**: Publishes crowd analytics data to visualization systems
 
-## Set up and First Use
-
-### 1. **Access the Node-RED Interface**
-
-Launch Node-RED in your web browser using your host system's IP address:
-
-```bash
-# Find your host IP address if needed
-hostname -I | awk '{print $1}'
-```
+#### 7.2 **Access the Node-RED Interface**
 
 Open your web browser and navigate to the Node-RED interface:
 ```
@@ -392,23 +207,7 @@ https://<HOST_IP>/nodered/
 ```
 Replace `<HOST_IP>` with your actual system IP address.
 
-<details>
-<summary>
-Troubleshooting Node-RED Access
-</summary>
-
-If you cannot access Node-RED:
-1. Verify the crowd analytics application is running:
-   ```bash
-   docker ps | grep node-red
-   ```
-2. Check that port 1880 is exposed and accessible
-3. Ensure no firewall is blocking the connection
-4. Try accessing via localhost if running on the same machine: https://localhost/nodered/
-
-</details>
-
-### 2. **Clear Existing Node-RED Flows**
+#### 7.3 **Clear Existing Node-RED Flows**
 
 Remove any existing flows to start with a clean workspace:
 
@@ -416,7 +215,7 @@ Remove any existing flows to start with a clean workspace:
 2. **Delete Selected Nodes**: Press the `Delete` key to remove all selected nodes
 3. **Deploy Changes**: Click the red **Deploy** button in the top-right corner to save the changes
 
-### 3. **Create MQTT Input Connection for Vehicle Data**
+#### 7.4 **Create MQTT Input Connection for Vehicle Data**
 
 Set up an MQTT subscriber node to receive vehicle detection data:
 
@@ -434,7 +233,7 @@ Set up an MQTT subscriber node to receive vehicle detection data:
    - **Name**: `Vehicle Detection Input`
    - Click **Done** to save the configuration
 
-### 4. **Add Debug Output for Vehicle Data Monitoring**
+#### 7.5 **Add Debug Output for Vehicle Data Monitoring**
 
 Create a debug node to monitor incoming vehicle detection data:
 
@@ -451,34 +250,7 @@ Create a debug node to monitor incoming vehicle detection data:
    - Click **Deploy**
    - Check the debug panel (bug icon in the right sidebar) for incoming vehicle detection messages
 
-4. **Start the Crowd Analytics Pipeline** (if needed):
-   If you don't see data in the debug panel, execute the crowd analytics pipeline using this curl command:
-
-   ```bash
-   curl -k -s https://localhost/api/pipelines/user_defined_pipelines/yolov11s_crowd_analytics -X POST -H 'Content-Type: application/json' -d '
-   {
-       "source": {
-           "uri": "file:///home/pipeline-server/videos/easy1.mp4",
-           "type": "uri"
-       },
-       "destination": {
-           "metadata": {
-               "type": "mqtt",
-               "topic": "object_detection_1",
-               "timeout": 1000
-           },
-           "frame": {
-               "type": "webrtc",
-               "peer-id": "object_detection_1"
-           }
-       },
-       "parameters": {
-           "detection-device": "CPU"
-       }
-   }'
-   ```
-
-### 5. **Implement Vehicle Position Extraction Function**
+#### 7.6 **Implement Vehicle Position Extraction Function**
 
 Add a function node to extract vehicle positions from detection data:
 
@@ -491,7 +263,7 @@ Add a function node to extract vehicle positions from detection data:
    - **Function Code**:
 
 ```javascript
-// Extract vehicle positions from YOLOv10s detection data
+// Extract vehicle positions from YOLOv11s detection data
 // Calculate centroid coordinates for each detected vehicle
 
 // Parse JSON if payload is a string
@@ -596,7 +368,7 @@ msg.payload = {
 return msg;
 ```
 
-### 6. **Implement Hotspot Detection Algorithm**
+#### 7.7 **Implement Hotspot Detection Algorithm**
 
 Add a function node to calculate inter-vehicle distances and detect hotspots:
 
@@ -882,7 +654,7 @@ return msg;
 ```
 
 
-### 7. **Add Hotspot Analytics Output Processing**
+#### 7.8 **Add Hotspot Analytics Output Processing**
 
 Create a function node to generate hotspot analytics summaries and alerts:
 
@@ -952,7 +724,7 @@ return tableData.map(hotspot => {
 });
 ```
 
-### 8. **Configure MQTT Output for Hotspot Analytics**
+#### 7.9 **Configure MQTT Output for Hotspot Analytics**
 
 Set up a single MQTT publisher for hotspot analytics data:
 
@@ -966,7 +738,7 @@ Set up a single MQTT publisher for hotspot analytics data:
      - **Retain**: `false`
      - **Name**: `Hotspot Analytics Publisher`
 
-### 9. **Add Debug Monitoring**
+#### 7.10 **Add Debug Monitoring**
 
 Create debug nodes to monitor the hotspot analytics pipeline:
 
@@ -981,7 +753,7 @@ Create debug nodes to monitor the hotspot analytics pipeline:
    - Set each debug node to output `msg.payload`
    - Enable console output for troubleshooting
 
-### Expected Node-RED Flow
+#### 7.11 **Expected Node-RED Flow**
 
 ![Crowd Analytics Node-RED Flow](_images/crowd-analytics-node-red-flow.png)
 
@@ -1022,41 +794,19 @@ Test your complete crowd analytics Node-RED flow:
    - Vehicle crowd alert generation for different congestion scenarios
    - Review hotspot length calculations in the output
 
-## Troubleshooting
 
-### 1. **No Data in Debug Panel**
-- **Problem**: Debug nodes show no incoming data
-- **Solution**: 
-  - Verify the AI application is running and generating inference data
-  - Check MQTT topic names match your application's output topics
-  - Ensure proper JSON parsing in function nodes
-
-### 2. **Function Node Errors**
-- **Problem**: Function node shows errors in the debug panel
-- **Solution**: 
-  - Add try-catch blocks around JSON parsing
-  - Use `node.warn()` or `node.error()` for debugging
-  - Validate input data structure before processing
-
-
-After successfully implementing hotspot analytics with Node-RED, follow the following steps to set up Grafana dashboards for visualizing the hotspot data and metrics. This will allow you to monitor vehicle congestion and hotspot formations in real-time, providing valuable insights.
-
-
----------------------------------------
-# Visualizing Hotspot Analytics in Grafana
+### 8. **Visualizing Hotspot Analytics in Grafana**
 
 The hotspot analytics data published to `hotspot_analytics` can be visualized in real-time using Grafana.
 
-#### **Quick Setup Steps**
+#### 8.1 **Access Grafana**: Navigate to `https://<HOST_IP>/grafana` (Username: `admin`, Password: `admin`)
 
-1. **Access Grafana**: Navigate to `https://<HOST_IP>/grafana` (Username: `admin`, Password: `admin`)
-
-2. **Create New Dashboard**:
+#### 8.2 **Create New Dashboard**:
    - Click the "+" icon in the right sidebar
    - Select "New Dashboard" from the top right menu
    - Click "Add Visualization"
 
-### 2. **Add Real-Time Video Stream Panel**
+#### 8.3 **Add Real-Time Video Stream Panel**
 
 1. **Create HTML Panel for Live Feed**:
    - In the panel editor, change the visualization type to "Text" (On Right side of Visualization Editor)
@@ -1078,7 +828,7 @@ The hotspot analytics data published to `hotspot_analytics` can be visualized in
    - Click "Apply" to save the panel
    - Adjust panel size as needed
 
-### 3. **Create Crowd Analytics Data Table**
+#### 8.4 **Create Crowd Analytics Data Table**
 
 1. **Add New Panel**:
    - Click "Add Visualization" to create another visualization
@@ -1091,7 +841,7 @@ The hotspot analytics data published to `hotspot_analytics` can be visualized in
    - Update Topic to "hotspot_analytics"
 
 3. **Add Transformations** (Transform tab at bottom):   
-   a. **Sort by**:
+   - **Sort by**:
       - Click **"+ Add transformation"** → Select **"Sort by"**
       - **Field**: Select **"Time"**
       - **Reverse**: Toggle to **On** (newest first)
@@ -1099,7 +849,7 @@ The hotspot analytics data published to `hotspot_analytics` can be visualized in
       
       **Purpose**: Ensures the most recent data for each hotspot appears first
    
-   b. **Group by**:
+   - **Group by**:
       - Click **"+ Add transformation"** → Select **"Group by"**
       - **Group by**: Select **"hotspot_id"**
       - **Calculations** (configure for each field):
@@ -1126,7 +876,7 @@ The hotspot analytics data published to `hotspot_analytics` can be visualized in
    - Click the save icon at the top of the dashboard
    - Name your dashboard "Vehicle Crowd Analytics Dashboard"
 
-6. **Run the pipeline** (if not already running):
+6. **Run the pipeline**:
    - Use the curl command to start the crowd analytics pipeline to see the expected results:
    
    ```bash
@@ -1156,67 +906,3 @@ The hotspot analytics data published to `hotspot_analytics` can be visualized in
 ## Expected Results
 
 ![Crowd Analytics Grafana](_images/crowd-analytics-grafana.png)
-
-After completing this tutorial, you should have:
-
-- **Interactive Dashboard**: A custom Grafana dashboard displaying real-time video and data
-- **Live Video Feed**: WebRTC stream showing object detection overlay
-- **Dynamic Data Table**: Real-time MQTT data updates with detection information
-- **Integrated Monitoring**: Combined visual and analytical view of the crowd detection
-
-**Troubleshooting**:
-- **No data appearing**: Verify Node-RED flow is deployed and pipeline is running
-- **Same hotspot appearing multiple times**: Add the **"Sort by"** and **"Group by hotspot_id"** transformations to deduplicate
-- **Only 1 row shown when 3 hotspots exist**: Verify all transformations are applied in correct order: Sort by → Group by
-
-
-## Troubleshooting
-
-### **No Vehicle Detection Data**
-- **Problem**: Debug nodes show no incoming vehicle data
-- **Solution**: 
-  ```bash
-  # Verify crowd analytics pipeline is running
-  curl -k -s https://localhost/api/pipelines/user_defined_pipelines/yolov11s_crowd_analytics
-  # Check MQTT broker connectivity
-  docker logs <mqtt-container-name>
-  ```
-
-### **Incorrect Distance Calculations**
-- **Problem**: Crowd detection not working properly
-- **Solution**: 
-  - Verify bounding box coordinates are valid (x, y, w, h format)
-  - Check centroid calculations in vehicle position extractor
-  - Adjust `DISTANCE_THRESHOLD` for your specific video resolution (default: 150 pixels for 1920x1080)
-
-### **No Hotspots Detected**
-- **Problem**: Vehicles are present but no hotspots detected
-- **Solution**: 
-  - Increase the `DISTANCE_THRESHOLD` value (try 200-300 pixels)
-  - Verify `MIN_HOTSPOT_SIZE` is set to 2 vehicles
-  - Check vehicle filtering logic (car, truck, bus types)
-  - Review proximity_pairs in debug output to see actual distances
-
-### **Function Node Errors**
-- **Problem**: JavaScript errors in hotspot detection functions
-- **Solution**: 
-  - Add error handling with try-catch blocks
-  - Use `node.warn()` for debugging intermediate values
-  - Validate input data structure before processing
-  - Check that msg.payload.metadata.objects exists
-
-### **Hotspot Length Not Calculated**
-- **Problem**: Hotspot length shows as 0 or undefined
-- **Solution**:
-  - Verify that multiple vehicles are detected in the hotspot
-  - Check that distance_mode used for calculations are working
-  - Review the `max_distance` field in hotspot output
-  - Ensure distanceMatrix is populated correctly
-
-## Supporting Resources
-
-- [DLStreamer Documentation](https://dlstreamer.github.io/)
-- [Metro AI Solutions](https://github.com/open-edge-platform/edge-ai-suites/tree/main/metro-ai-suite)
-- [Node-RED Official Documentation](https://nodered.org/docs/)
-- [MQTT Protocol Specification](https://mqtt.org/)
-- [Euclidean Distance Algorithms](https://en.wikipedia.org/wiki/Euclidean_distance)
