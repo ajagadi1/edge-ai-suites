@@ -798,15 +798,16 @@ The hotspot analytics data that would be published to `hotspot_analytics` can be
    - Click the "+" icon in the right sidebar
    - Select "New Dashboard" from the top right menu
    - Click "Add Visualization"
+   - Close the pop-up window.
 
 #### 8.3 **Add Real-Time Video Stream Panel**
 
 1. **Create HTML Panel for Live Feed**:
-   - In the panel editor, change the visualization type to "Text" (On Right side of Visualization Editor)
+   - In the panel editor, change the visualization type to "Text" (On Right side of Visualization Editor Drop Down) from the already present default type (generally 'Time series' is the default)
    - In the panel options set title to "Live Vehicle Crowd Detection Feed"
    - In the Text option, switch mode to "HTML" mode
-   - Add the following iframe code in the content:
-   - In the below code update <HOST_IP> to your host IP address. If you are testing on localhost, update it to localhost.
+   - Add the following iframe code in the "Content":
+   - In the below "Content", update <HOST_IP> to your host IP address. If you are testing on localhost, update it to localhost.
 
    ```html
    <iframe 
@@ -818,17 +819,18 @@ The hotspot analytics data that would be published to `hotspot_analytics` can be
    ```
 2. **Save Dashboard**
    - Click the "save dashboard" icon at the top right corner of the dashboard
-   - Name your dashboard "Vehicle Crowd Analytics Dashboard"
+   - Name your dashboard "Title" as "Vehicle Crowd Analytics Dashboard"
+   - Click Save
+   - Click "Back to dashboard" on the top right
 
 #### 8.4 **Create Crowd Analytics Data Table**
 
 1. **Add New Panel and Configure Data Source**:
-   - Click "Add Visualization" to create another visualization
+   - Click "Add" on the top right and select "Visualization" from the dropdown to create another visualization
    - Set your MQTT data source as "grafana-mqtt-datasource"
-   - Configure topic to fetch hotspot analytics data
-   - Update Topic to "hotspot_analytics"
-   - Select "Table" as the visualization type (On Right side of Visualization Editor)
-   - Set panel title to "Real-time Vehicle Hotspot Analytics"
+   - Configure topic to fetch hotspot analytics data: Update Topic to "hotspot_analytics"
+   - Select "Table" as the visualization type (On Right side of Visualization Editor Drop Down) from the already present default type (generally 'Time series' is the default)
+   - Set "Title" under "Panel Options" to "Real-time Vehicle Hotspot Analytics"
 
 2. **Run the pipeline**:
    - Use the curl command to start the crowd analytics pipeline
@@ -868,8 +870,8 @@ The hotspot analytics data that would be published to `hotspot_analytics` can be
    
    - **Group by**:
       - Click **"+ Add transformation"** → Select **"Group by"**
-      - **Group by**: Select **"hotspot_id"**
-      - **Calculations** (configure for each field):
+      - Under **Group by** panel:
+        -  `hotspot_id`: Select **Group by**
         - `timestamp`: Select **Calculate** -> **Select Stats** -> **"Last"**
         - `hotspot_number`: Select **Calculate** -> **Select Stats** -> **"Last"**
         - `vehicle_count`: Select **Calculate** -> **Select Stats** -> **"Last"**
@@ -883,12 +885,16 @@ The hotspot analytics data that would be published to `hotspot_analytics` can be
 
     You can add more transformations as needed for additional fields.
 
-4. **Configure Time Window and Refresh** (for real-time display):
-   - **Time Range** (top-right corner): Set to **"Last 5 seconds"**
-   - **Auto-refresh**: Select **"5s"** from dropdown
+4. **Save Dashboard**
+   - Click the "Save dashboard" on the top right
+   - Click "Save"
+   - Go back to the dashboard "Vehicle Crowd Analytics Dashboard" view and "Save dashboard" if there are any further changes and then click on "Exit edit".
 
-5. **Save Dashboard**
-   - Click the save icon at the top of the dashboard
+5. **Configure Time Window and Auto Refresh** (for real-time display):
+   - Select "Time" from the dropdown button on the top and set the below absolute time range.
+       - From: now-5s
+       - To: now
+   - Select "Refresh" on the top next to "Time": Select **"5s"** from dropdown
 
 6. **Run the pipeline** (if not already running):
    - Use the curl command to start the crowd analytics pipeline to see the expected results:
@@ -917,6 +923,7 @@ The hotspot analytics data that would be published to `hotspot_analytics` can be
         }'
         ```
         Note: You can check if a pipeline is running currently with `curl -k -s https://localhost/api/pipelines/status`
+
 
 #### 8.5 **Expected Results**
 
