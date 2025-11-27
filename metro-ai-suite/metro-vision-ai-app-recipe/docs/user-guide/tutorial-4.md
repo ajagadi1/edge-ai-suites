@@ -23,9 +23,14 @@ This architecture is capable of building any typical Vision AI sample applicatio
 
 ## How to leverage an existing 'Metro Vision AI App Recipe powered application' and turn it into a 'new application' by 'vibe coding'
 
-The below process is recommended to leverage an existing 'Metro Vision AI App Recipe powered application' and turn it into a 'new application' by 'vibe coding':
+The below aspects need to be updated accordingly, in order to leverage an existing 'Metro Vision AI App Recipe powered application' and turn it into a 'new application' by 'vibe coding':
 
-- 
+- Vision Analytics Pipeline: This is the AI processing DL Streamer pipeline that needs to be modified appropriately, considering the new AI model and new video source input.
+- Node Red Business Logic: This is the business logic that runs on the vision analytics pipeline output. This decides what post-processing happens on the vision analytics pipeline output, the result of which would be provided as insights in the grafana dashboard. This is where 'vibe coding' comes into play. We will interact with Claude Sonnet 4.5 in the github copilot offering.
+
+## Build a new application: 'AI Crowd Analytics' 
+ Now let's
+
 
 
 By following this guide, you will learn how to:
