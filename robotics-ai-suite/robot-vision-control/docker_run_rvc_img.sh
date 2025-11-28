@@ -25,22 +25,9 @@ set -e
 
 # Parse arguments
 ROS_DISTRO=${1:-humble}
+CONTAINER_NAME="rvc-container-${ROS_DISTRO}"
 
-echo "Running rvc-exec:${ROS_DISTRO} container..."
-
-# Run the Docker container
-docker run -it \
-	--volume=/dev:/dev \
-	--volume=/tmp/.X11-unix:/tmp/.X11-unix \
-	--ipc=host \
-    --network=host \
-    --privileged \
-    --env="DISPLAY" \
-    --env="WAYLAND_DISPLAY" \
-    --env="XDG_RUNTIME_DIR" \
-    --env="PULSE_SERVER" \
-    rvc-exec:${ROS_DISTRO} \
-    /bin/bash
+echo "Checking for existing container: ${CONTAINER_NAME}..."
 
 # Check if the container already exists
 if [ "$(docker ps -aq -f name=^${CONTAINER_NAME}$)" ]; then
@@ -74,7 +61,7 @@ else
         --env="XDG_RUNTIME_DIR" \
         --env="PULSE_SERVER" \
         --device-cgroup-rule='c 189:* rmw' \
-        "${IMAGE_NAME}" \
+        rvc-exec:${ROS_DISTRO} \
         /bin/bash
 
     if [[ $? -ne 0 ]]; then
