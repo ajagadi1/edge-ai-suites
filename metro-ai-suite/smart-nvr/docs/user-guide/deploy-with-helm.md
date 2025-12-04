@@ -86,7 +86,7 @@ cd edge-ai-suites/metro-ai-suite/smart-nvr
 
 ### 2. Configure Required Values
 
-The application requires several values to be set by user in order to work. To make it easier, we have included a `user_values_override.yaml` file, which contains only the values that user needs to tweak. Open the file in your favorite editor or use nano.
+The application requires several values to be set by user in order to work. To make it easier, we have included a `user_value_override.yaml` file, which contains only the values that user needs to tweak. Open the file in your favorite editor or use nano.
 
 Update or edit the values in YAML file as follows:
 
