@@ -169,14 +169,7 @@ If you changed the port, adjust the URL accordingly.
 - Nothing at localhost:5173: Check that the frontend terminal shows Vite server running and no port conflict.
 - Firewall blocks access: Allow inbound on ports 5173 (frontend) and 8000 (backend) on Windows.
 - Auto reload not happening: Refresh manually if backend was restarted after initial UI load.
-- If you encounter the error “Port for tensor name cache_position was not found.” in the backend, it indicates the models were not configured as per the instructions in the README. To fix the issue, run:
-
-  ```bash
-  # Use Python 3.12.x before running pip.
-  pip install --upgrade -r requirements.txt
-  ```
-
-  Then delete the models directory from `edge-ai-suites/education-ai-suite/smart-classroom/models` and try again.
+- If you see the error “Port for tensor name cache_position was not found.” in the backend, it means the models weren’t configured correctly. To fix this, delete the models directory at edge-ai-suites/education-ai-suite/smart-classroom/models, then rerun only step 1’s option c (for OpenVINO) or d (for IPEX), whichever applies to your setup.
 - If you face a tokenizer load issue like this:
 
   ``` bash
