@@ -55,8 +55,8 @@ https://github.com/open-edge-platform/edge-ai-suites/blob/main/manufacturing-ai-
    }
  ```
 
-:::
-::::
+<!--:::
+::::-->
 
 #### Configure MQTT Alert in TICK Script
 
