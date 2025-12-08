@@ -19,11 +19,9 @@ Choose **one** of the following approaches to get the Helm charts:
 
 <!--hide_directive
 ::::{tab-set}
-:::{tab-item} **Wind Turbine Anomaly Detection**
+:::{tab-item} hide_directive--> **Wind Turbine Anomaly Detection**
+<!--hide_directive
 :sync: tab1
-
-::::
-:::
 hide_directive-->
 
 **Option A: Download the Helm charts**
@@ -53,9 +51,12 @@ hide_directive-->
 
 3. Proceed to Step 2 to configure your `values.yaml` file present in the current directory.
 
+<!--hide_directive
 :::
-:::{tab-item} **Weld Anomaly Detection**
+:::{tab-item} hide_directive--> **Weld Anomaly Detection**
+<!--hide_directive
 :sync: tab2
+hide_directive-->
 
 **Option A: Download the Helm charts**
 
@@ -114,11 +115,9 @@ hide_directive-->
 
 <!--hide_directive
 ::::{tab-set}
-:::{tab-item} **Wind Turbine Anomaly Detection**
+:::{tab-item} hide_directive--> **Wind Turbine Anomaly Detection**
+<!--hide_directive
 :sync: tab1
-
-::::
-:::
 hide_directive-->
 
 To install Helm charts, use one of the following options:
@@ -147,11 +146,9 @@ To install Helm charts, use one of the following options:
 
 <!--hide_directive
 :::
-:::{tab-item} **Weld Anomaly Detection**
+:::{tab-item} hide_directive--> **Weld Anomaly Detection**
+<!--hide_directive
 :sync: tab2
-
-::::
-:::
 hide_directive-->
 
 
@@ -169,13 +166,10 @@ hide_directive-->
 ## Step 4: Copy the udf package for helm deployment to Time Series Analytics Microservice
 
 <!--hide_directive
-
 ::::{tab-set}
-:::{tab-item} **Wind Turbine Anomaly Detection**
-:sync: tab1
-
-::::
-:::
+:::{tab-item} hide_directive--> **Wind Turbine Anomaly Detection**
+<!--hide_directive
+:sync: tab
 hide_directive-->
 
 To copy your own or existing model into Time Series Analytics Microservice in order to run this sample application in Kubernetes environment:
@@ -208,11 +202,9 @@ To copy your own or existing model into Time Series Analytics Microservice in or
 <!--hide_directive
 
 :::
-:::{tab-item} **Weld Anomaly Detection**
+:::{tab-item} hide_directive--> **Weld Anomaly Detection**
+<!--hide_directive
 :sync: tab2
-
-::::
-:::
 hide_directive-->
 
 To copy your own or existing model into Time Series Analytics Microservice in order to run this sample application in Kubernetes environment:
@@ -280,11 +272,9 @@ Follow the verification steps in the [Get Started guide](../get-started.md#verif
 
 <!--hide_directive
 ::::{tab-set}
-:::{tab-item} **Wind Turbine Anomaly Detection**
+:::{tab-item} hide_directive--> **Wind Turbine Anomaly Detection**
+<!--hide_directive
 :sync: tab1
-
-::::
-:::
 hide_directive-->
 
 ```sh
@@ -294,11 +284,9 @@ kubectl get all -n ts-sample-app # It may take a few minutes for all application
 
 <!--hide_directive
 :::
-:::{tab-item} **Weld Anomaly Detection**
+:::{tab-item} hide_directive--> **Weld Anomaly Detection**
+<!--hide_directive
 :sync: tab2
-
-::::
-:::
 hide_directive-->
 
 ```sh
