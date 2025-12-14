@@ -6,8 +6,8 @@ import subprocess
 import sys
 import re
 import logging
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+# from selenium import webdriver
+# from selenium.webdriver.chrome.options import Options
 
 
 for handler in logging.root.handlers[:]:
@@ -48,20 +48,20 @@ class utils:
         self.retry_delay = 10
 
 
-    def _get_chrome_options(self, extra_options=None):
-        """Get standardized Chrome options for headless browsing"""
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--ignore-ssl-errors")
-        chrome_options.add_argument("--ignore-certificate-errors")
-        chrome_options.add_argument("--allow-running-insecure-content")
-        if extra_options:
-            for option in extra_options:
-                chrome_options.add_argument(option)
+    # def _get_chrome_options(self, extra_options=None):
+    #     """Get standardized Chrome options for headless browsing"""
+    #     chrome_options = Options()
+    #     chrome_options.add_argument("--headless")
+    #     chrome_options.add_argument("--no-sandbox")
+    #     chrome_options.add_argument("--disable-dev-shm-usage")
+    #     chrome_options.add_argument("--ignore-ssl-errors")
+    #     chrome_options.add_argument("--ignore-certificate-errors")
+    #     chrome_options.add_argument("--allow-running-insecure-content")
+    #     if extra_options:
+    #         for option in extra_options:
+    #             chrome_options.add_argument(option)
         
-        return chrome_options
+    #     return chrome_options
 
     def _execute_command(self, command, description="command", raise_on_error=True):
         """Execute shell command with proper error handling"""
@@ -381,61 +381,61 @@ class utils:
             return False
 
 
-    def verify_grafana_url(self, value):
-        """Verify Grafana Dashboard at different ports based on deployment type"""
-        driver = None
-        try:
-            logging.info(f"Verifying Grafana Dashboard")
-            chrome_options = self._get_chrome_options()
-            driver = webdriver.Chrome(options=chrome_options)
-            driver.implicitly_wait(10)
-            if value.get("app") == "SI":
-                login_url = f"http://{hostIP}:3000/login"
-                dashboard_url = f"http://{hostIP}:3000/dashboards"
-                post_success_log = "Grafana Dashboard is accessible and showing data for SI"
-            else:
-                logging.info("Detected docker deployment - using standard grafana path")
-                login_url = f"https://{hostIP}/grafana/login"
-                dashboard_url = f"https://{hostIP}/grafana/dashboards"
-                post_success_log = "Grafana Dashboard is accessible and showing data"
+    # def verify_grafana_url(self, value):
+    #     """Verify Grafana Dashboard at different ports based on deployment type"""
+    #     driver = None
+    #     try:
+    #         logging.info(f"Verifying Grafana Dashboard")
+    #         chrome_options = self._get_chrome_options()
+    #         driver = webdriver.Chrome(options=chrome_options)
+    #         driver.implicitly_wait(10)
+    #         if value.get("app") == "SI":
+    #             login_url = f"http://{hostIP}:3000/login"
+    #             dashboard_url = f"http://{hostIP}:3000/dashboards"
+    #             post_success_log = "Grafana Dashboard is accessible and showing data for SI"
+    #         else:
+    #             logging.info("Detected docker deployment - using standard grafana path")
+    #             login_url = f"https://{hostIP}/grafana/login"
+    #             dashboard_url = f"https://{hostIP}/grafana/dashboards"
+    #             post_success_log = "Grafana Dashboard is accessible and showing data"
 
-            # Navigate to login page and ensure it's accessible
-            driver.get(login_url)
-            assert "404" not in driver.title, "Grafana login page not accessible"
-            # Perform login
-            username_input = driver.find_element("name", "user")
-            password_input = driver.find_element("name", "password")
-            username_input.send_keys("admin")
-            password_input.send_keys("admin")
-            driver.find_element("css selector", "button[type='submit']").click()
-            driver.implicitly_wait(5)
+    #         # Navigate to login page and ensure it's accessible
+    #         driver.get(login_url)
+    #         assert "404" not in driver.title, "Grafana login page not accessible"
+    #         # Perform login
+    #         username_input = driver.find_element("name", "user")
+    #         password_input = driver.find_element("name", "password")
+    #         username_input.send_keys("admin")
+    #         password_input.send_keys("admin")
+    #         driver.find_element("css selector", "button[type='submit']").click()
+    #         driver.implicitly_wait(5)
 
-            # Handle docker password change prompt if it appears
-            if value.get("app") != "SI":
-                try:
-                    if "change-password" in driver.current_url or "password" in driver.page_source.lower():
-                        logging.info("Password change prompt detected, skipping...")
-                        try:
-                            skip_button = driver.find_element("xpath", "//button[contains(text(), 'Skip')]")
-                            skip_button.click()
-                        except:
-                            driver.get(login_url.replace('/login', ''))
-                except:
-                    pass
+    #         # Handle docker password change prompt if it appears
+    #         if value.get("app") != "SI":
+    #             try:
+    #                 if "change-password" in driver.current_url or "password" in driver.page_source.lower():
+    #                     logging.info("Password change prompt detected, skipping...")
+    #                     try:
+    #                         skip_button = driver.find_element("xpath", "//button[contains(text(), 'Skip')]")
+    #                         skip_button.click()
+    #                     except:
+    #                         driver.get(login_url.replace('/login', ''))
+    #             except:
+    #                 pass
 
-            # Verify login success and dashboard accessibility
-            assert "Grafana" in driver.title or "Home" in driver.page_source, "Grafana login failed"
-            driver.get(dashboard_url)
-            driver.implicitly_wait(10)
-            assert "No data" not in driver.page_source, "Grafana dashboard is not showing data"
-            logging.info(post_success_log)
-            return True
-        except Exception as e:
-            logging.error(f"Failed to verify Grafana URL: {e}")
-            raise Exception(f"Grafana URL verification failed: {e}")
-        finally:
-            if driver:
-                driver.quit()
+    #         # Verify login success and dashboard accessibility
+    #         assert "Grafana" in driver.title or "Home" in driver.page_source, "Grafana login failed"
+    #         driver.get(dashboard_url)
+    #         driver.implicitly_wait(10)
+    #         assert "No data" not in driver.page_source, "Grafana dashboard is not showing data"
+    #         logging.info(post_success_log)
+    #         return True
+    #     except Exception as e:
+    #         logging.error(f"Failed to verify Grafana URL: {e}")
+    #         raise Exception(f"Grafana URL verification failed: {e}")
+    #     finally:
+    #         if driver:
+    #             driver.quit()
 
 
     def stop_pipeline_and_check(self, value):

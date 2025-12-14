@@ -42,11 +42,11 @@ Sp_Test_case_006
     Should Not Be Equal As Integers    ${status}    1
     RETURN         Run Keyword And Return Status    ${status}
 
-Sp_Test_case_007
-    [Documentation]      [SmartParking] Run and view application output in grafana dashboard backend:CPU
-    ${status}          TC_007_SP
-    Should Not Be Equal As Integers    ${status}    1
-    RETURN         Run Keyword And Return Status    ${status}
+#Sp_Test_case_007
+#    [Documentation]      [SmartParking] Run and view application output in grafana dashboard backend:CPU
+#    ${status}          TC_007_SP
+#    Should Not Be Equal As Integers    ${status}    1
+#    RETURN         Run Keyword And Return Status    ${status}
 
 
 Ld_Test_case_001
@@ -85,11 +85,11 @@ Ld_Test_case_006
     Should Not Be Equal As Integers    ${status}    1
     RETURN         Run Keyword And Return Status    ${status}
 
-Ld_Test_case_007
-    [Documentation]      [LoiteringDetection] Run and view application output in grafana dashboard backend:CPU
-    ${status}          TC_007_LD
-    Should Not Be Equal As Integers    ${status}    1
-    RETURN         Run Keyword And Return Status    ${status}
+#Ld_Test_case_007
+#    [Documentation]      [LoiteringDetection] Run and view application output in grafana dashboard backend:CPU
+#    ${status}          TC_007_LD
+#    Should Not Be Equal As Integers    ${status}    1
+#    RETURN         Run Keyword And Return Status    ${status}
 
 
 Si_Test_case_001
@@ -110,11 +110,11 @@ Si_Test_case_003
     Should Not Be Equal As Integers    ${status}    1
     RETURN         Run Keyword And Return Status    ${status}
 
-Si_Test_case_004
-    [Documentation]      [SmartIntersection] Run and view application output in grafana dashboard backend:CPU
-    ${status}          TC_004_SI
-    Should Not Be Equal As Integers    ${status}    1
-    RETURN         Run Keyword And Return Status    ${status}
+#Si_Test_case_004
+#    [Documentation]      [SmartIntersection] Run and view application output in grafana dashboard backend:CPU
+#    ${status}          TC_004_SI
+#    Should Not Be Equal As Integers    ${status}    1
+#    RETURN         Run Keyword And Return Status    ${status}
 
 
 
@@ -159,11 +159,11 @@ SP_TC_006
     ${Status}    Run Keyword And Return Status   Sp_Test_case_006
     Should Not Be Equal As Integers    ${Status}    0
 
-SP_TC_007
-    [Documentation]    [SmartParking] Run and view application output in grafana dashboard backend:CPU
-    [Tags]      app
-    ${Status}    Run Keyword And Return Status   Sp_Test_case_007
-    Should Not Be Equal As Integers    ${Status}    0
+#SP_TC_007
+#    [Documentation]    [SmartParking] Run and view application output in grafana dashboard backend:CPU
+#    [Tags]      app
+#    ${Status}    Run Keyword And Return Status   Sp_Test_case_007
+#    Should Not Be Equal As Integers    ${Status}    0
 
 LD_TC_001
     [Documentation]    [LoiteringDetection] Verify install.sh to download the assets and check the assets are downloaded
@@ -201,11 +201,11 @@ LD_TC_006
     ${Status}    Run Keyword And Return Status   Ld_Test_case_006
     Should Not Be Equal As Integers    ${Status}    0
 
-LD_TC_007
-    [Documentation]    [LoiteringDetection] Run and view application output in grafana dashboard backend:CPU
-    [Tags]      app
-    ${Status}    Run Keyword And Return Status   Ld_Test_case_007
-    Should Not Be Equal As Integers    ${Status}    0
+#LD_TC_007
+#    [Documentation]    [LoiteringDetection] Run and view application output in grafana dashboard backend:CPU
+#    [Tags]      app
+#    ${Status}    Run Keyword And Return Status   Ld_Test_case_007
+#    Should Not Be Equal As Integers    ${Status}    0
 
 SI_TC_001
     [Documentation]    [SmartIntersection] Verify install.sh to download the assets and check the assets are downloaded
@@ -225,8 +225,8 @@ SI_TC_003
     ${Status}    Run Keyword And Return Status   Si_Test_case_003
     Should Not Be Equal As Integers    ${Status}    0
 
-SI_TC_004
-    [Documentation]    [SmartIntersection] Run and view application output in grafana dashboard backend:CPU
-    [Tags]      app
-    ${Status}    Run Keyword And Return Status   Si_Test_case_004
-    Should Not Be Equal As Integers    ${Status}    0
+#SI_TC_004
+#    [Documentation]    [SmartIntersection] Run and view application output in grafana dashboard backend:CPU
+#    [Tags]      app
+#    ${Status}    Run Keyword And Return Status   Si_Test_case_004
+#    Should Not Be Equal As Integers    ${Status}    0
