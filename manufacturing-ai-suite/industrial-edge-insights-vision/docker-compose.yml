@@ -4,7 +4,6 @@ services:
       model_registry:
         condition: service_healthy
     image: ${DLSTREAMER_PIPELINE_SERVER_IMAGE}
-    container_name: dlstreamer-pipeline-server
     hostname: dlstreamer-pipeline-server
     networks:
     - mraas
@@ -83,7 +82,6 @@ services:
 
   mediamtx:
     image: bluenviron/mediamtx:1.11.3
-    container_name: mediamtx-server
     environment:
       - MTX_LOGLEVEL=debug
       - MTX_RTSP=no
@@ -100,7 +98,6 @@ services:
 
   coturn:
     image: coturn/coturn:latest
-    container_name: coturn
     ports:
       - "${COTURN_UDP_PORT}:3478/udp"
     networks:
@@ -108,7 +105,6 @@ services:
 
   mqtt-broker:
     image: eclipse-mosquitto
-    container_name: mqtt-broker
     networks:
       - mraas
     volumes:
@@ -116,7 +112,6 @@ services:
       
   nginx:
     image: nginx:1.27-alpine
-    container_name: nginx-reverse-proxy
     ports:
       - "80:80"
       - "443:443"
@@ -140,7 +135,6 @@ services:
 
   model_registry:
     image: ${DOCKER_REGISTRY}intel/model-registry:1.0.3
-    container_name: model_registry
     hostname: model_registry
     ipc: "none"
     restart: unless-stopped
@@ -183,7 +177,6 @@ services:
       - mraas
   mraas_postgres:
     image: postgres:13
-    container_name: mraas_postgres
     hostname: mraas_postgres
     restart: unless-stopped
     security_opt:
@@ -202,7 +195,6 @@ services:
       - mraas
   mraas-minio:
     image: minio/minio:RELEASE.2020-12-12T08-39-07Z
-    container_name: ${MR_MINIO_HOSTNAME}
     hostname: ${MR_MINIO_HOSTNAME}
     ipc: "none"
     expose:
@@ -227,7 +219,6 @@ services:
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: prometheus
     environment:
       - HTTP_PROXY=${http_proxy}
       - HTTPS_PROXY=${https_proxy}
@@ -245,7 +236,6 @@ services:
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.94.0
-    container_name: otel-collector
     environment:
       HTTP_PROXY: ${http_proxy}
       HTTPS_PROXY: ${https_proxy}

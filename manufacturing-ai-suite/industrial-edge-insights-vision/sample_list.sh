@@ -39,8 +39,14 @@ init() {
         CURL_HOST_IP="${HOST_IP}:30443"
         echo "Using Helm deployment - curl commands will use: $CURL_HOST_IP"
     else
-        CURL_HOST_IP="$HOST_IP"
-        echo "Using default deployment - curl commands will use: $CURL_HOST_IP"
+        # Use HTTPS_PORT if set and not 443, otherwise use HOST_IP without port
+        if [[ -n "$HTTPS_PORT" ]] && [[ "$HTTPS_PORT" != "443" ]]; then
+            CURL_HOST_IP="${HOST_IP}:${HTTPS_PORT}"
+            echo "Using HTTPS_PORT=$HTTPS_PORT - curl commands will use: $CURL_HOST_IP"
+        else
+            CURL_HOST_IP="$HOST_IP"
+            echo "Using default deployment - curl commands will use: $CURL_HOST_IP"
+        fi
     fi
 
 }
