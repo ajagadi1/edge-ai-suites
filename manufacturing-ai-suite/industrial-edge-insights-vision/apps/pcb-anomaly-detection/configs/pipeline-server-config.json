@@ -5,7 +5,7 @@
                 "name": "pcb_anomaly_detection_mlops",
                 "source": "gstreamer",
                 "queue_maxsize": 50,
-                "pipeline": "multifilesrc loop=TRUE location=/home/pipeline-server/resources/videos/anomalib_pcb_test.avi name=source ! decodebin3 ! gvaclassify name=classification inference-region=full-frame device=CPU model-instance-id=inst0 ! queue ! gvafpscounter ! appsink name=destination",
+                "pipeline": "multifilesrc loop=TRUE location=/home/pipeline-server/resources/videos/anomalib_pcb_test.avi name=source ! h264parse ! decodebin3 ! gvaclassify name=classification inference-region=full-frame device=CPU model-instance-id=inst0 ! queue ! gvafpscounter ! appsink name=destination",
                 "parameters": {
                     "type": "object",
                     "properties": {
