@@ -68,7 +68,7 @@ spec:
         - configMapRef:
             name: '{{ include "image_based_video_search.fullname" . }}-dlstreamer-pipeline-server-env'
         image: '{{ tpl .Values.dlstreamerpipelineserver.repository.image $ }}:{{ tpl .Values.dlstreamerpipelineserver.repository.tag $ | default "latest" }}'
-        {{- if eq .Values.dlstreamerpipelineserver.pipeline "config.gpu.json" }}
+        {{- if or (eq .Values.dlstreamerpipelineserver.pipeline "config.gpu.json") (eq .Values.dlstreamerpipelineserver.pipeline "config.npu.json") }}
         securityContext:
           privileged: true
           readOnlyRootFilesystem: true
