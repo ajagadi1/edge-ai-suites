@@ -67,6 +67,9 @@ spec:
       - envFrom:
         - configMapRef:
             name: '{{ include "image_based_video_search.fullname" . }}-dlstreamer-pipeline-server-env'
+        env:
+        - name: ZE_ENABLE_ALT_DRIVERS
+          value: "libze_intel_npu.so"
         image: '{{ tpl .Values.dlstreamerpipelineserver.repository.image $ }}:{{ tpl .Values.dlstreamerpipelineserver.repository.tag $ | default "latest" }}'
         {{- if or (eq .Values.dlstreamerpipelineserver.pipeline "config.gpu.json") (eq .Values.dlstreamerpipelineserver.pipeline "config.npu.json") }}
         securityContext:
