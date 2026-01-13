@@ -1,4 +1,11 @@
 services:
+  v2x-bridge:
+    networks:
+      - scenescape
+    environment:
+      - MQTT_SERVER=scenescape
+      # - MQTT_PASSWORD=${SUPASS}
+      - V2X_API_URL=http://<host-ip>:9000
   ntpserver:
     image: docker.io/dockurr/chrony:4.6.1
     environment:
