@@ -107,7 +107,7 @@ spec:
         image: {{ .Values.dlstreamerPipelineServer.repository }}:{{ .Values.dlstreamerPipelineServer.tag }}
         name: {{ .Release.Name }}-dlstreamer-pipeline-server
         imagePullPolicy: {{ .Values.imagePullPolicy }}
-        {{- if .Values.dlstreamerPipelineServer.gpuWorkload }}
+        {{- if or .Values.dlstreamerPipelineServer.gpuWorkload .Values.dlstreamerPipelineServer.npuWorkload }}
         securityContext:
           privileged: true
           runAsUser: 0
