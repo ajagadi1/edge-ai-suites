@@ -1,11 +1,12 @@
 services:
   v2x-bridge:
+    image: scenescape-v2x-bridge:latest
     networks:
       - scenescape
     environment:
       - MQTT_SERVER=scenescape
       # - MQTT_PASSWORD=${SUPASS}
-      - V2X_API_URL=http://<host-ip>:9000
+      - V2X_API_URL=http://${HOST_IP}:9000
   ntpserver:
     image: docker.io/dockurr/chrony:4.6.1
     environment:
@@ -30,6 +31,9 @@ services:
       HTTP_PROXY: ${http_proxy}
       HTTPS_PROXY: ${https_proxy}
       NO_PROXY: ${no_proxy},.scenescape.intel.com,influxdb2
+    ports:
+      - "1883:1883"
+      - "1884:1884"
     volumes:
       - ./${SAMPLE_APP}/src/mosquitto/mosquitto-secure.conf:/mosquitto/config/mosquitto.conf
     secrets:
