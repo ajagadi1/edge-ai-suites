@@ -3,10 +3,14 @@ services:
     image: scenescape-v2x-bridge:latest
     networks:
       - scenescape
+    depends_on:
+      - broker
+      - scene
     environment:
-      - MQTT_SERVER=scenescape
+      - MQTT_SERVER=broker.scenescape.intel.com
       # - MQTT_PASSWORD=${SUPASS}
       - V2X_API_URL=http://${HOST_IP}:9000
+    restart: on-failure:5
   ntpserver:
     image: docker.io/dockurr/chrony:4.6.1
     environment:
