@@ -14,11 +14,11 @@ data:
         default_type application/octet-stream;
 
         upstream smart_intersection_web {
-            server smart-intersection-web:443;
+            server smart-corridor-web:443;
         }
 
         upstream grafana {
-            server smart-intersection-grafana:3000;
+            server smart-corridor-grafana:3000;
         }
 
         upstream influxdb {
@@ -26,11 +26,11 @@ data:
         }
 
         upstream nodered {
-            server smart-intersection-nodered:1880;
+            server smart-corridor-nodered:1880;
         }
 
         upstream dlstreamer {
-            server smart-intersection-dlstreamer-pipeline-server:8080;
+            server smart-corridor-dlstreamer-pipeline-server:8080;
         }
 
         # HTTP server - redirect to HTTPS

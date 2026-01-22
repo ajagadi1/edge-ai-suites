@@ -32,7 +32,7 @@ spec:
         - name: https_proxy
           value: {{ .Values.https_proxy | quote }}
         - name: no_proxy
-          value: "{{ .Values.no_proxy }},influxdb2, ntpserv,smart-intersection-broker,smart-intersection-dlstreamer-pipeline-server,smart-intersection-grafana,smart-intersection-nodered,smart-intersection-pgserver,smart-intersection-scene,smart-intersection-web"
+          value: "{{ .Values.no_proxy }},influxdb2, ntpserv,smart-corridor-broker,smart-corridor-dlstreamer-pipeline-server,smart-corridor-grafana,smart-corridor-nodered,smart-corridor-pgserver,smart-corridor-scene,smart-corridor-web"
         volumeMounts:
         - name: {{ .Release.Name }}-example-db
           mountPath: /data
@@ -47,7 +47,7 @@ spec:
         - name: https_proxy
           value: {{ .Values.https_proxy | quote }}
         - name: no_proxy
-          value: "{{ .Values.no_proxy }},influxdb2, ntpserv,smart-intersection-broker,smart-intersection-dlstreamer-pipeline-server,smart-intersection-grafana,smart-intersection-nodered,smart-intersection-pgserver,smart-intersection-scene,smart-intersection-web"
+          value: "{{ .Values.no_proxy }},influxdb2, ntpserv,smart-corridor-broker,smart-corridor-dlstreamer-pipeline-server,smart-corridor-grafana,smart-corridor-nodered,smart-corridor-pgserver,smart-corridor-scene,smart-corridor-web"
         - name: DBROOT
           value: /workspace
         - name: MODEL_CONFIGS_FOLDER
@@ -58,13 +58,13 @@ spec:
               name: {{ .Release.Name }}-supass-secret
               key: supass
         - name: EXAMPLEDB
-          value: /home/scenescape/SceneScape/example_db/smart-intersection-ri.tar.bz2
+          value: /home/scenescape/SceneScape/example_db/smart-corridor-ri.tar.bz2
         volumeMounts:
         - name: pgserver-media
           mountPath: /workspace/media
         - name: secrets
           mountPath: /tmp/secrets
-        - name: smart-intersection-ri-web-data
+        - name: smart-corridor-ri-web-data
           mountPath: /data
         - name: {{ .Release.Name }}-example-db
           mountPath: /home/scenescape/SceneScape/example_db

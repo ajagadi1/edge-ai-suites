@@ -96,11 +96,11 @@ This page provides comprehensive support and troubleshooting information for the
   
   - Inspect the logs:
     ```bash
-    kubectl logs pod/<scene-pod-name> -n smart-intersection
+    kubectl logs pod/<scene-pod-name> -n smart-corridor
     ```
   - Restart the scene controller:
     ```bash
-    kubectl delete pod/<scene-pod-name> -n smart-intersection
+    kubectl delete pod/<scene-pod-name> -n smart-corridor
     ```
 
 ## Troubleshooting Helm Deployments

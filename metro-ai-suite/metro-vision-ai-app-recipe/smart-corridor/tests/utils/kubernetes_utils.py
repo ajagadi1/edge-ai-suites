@@ -51,16 +51,16 @@ def get_scenescape_kubernetes_url():
   """Get the Kubernetes URL for SceneScape service."""
   global SCENESCAPE_KUBERNETES_URL
   if SCENESCAPE_KUBERNETES_URL is None:
-    web_node_port = get_node_port("smart-intersection-web", "smart-intersection")
+    web_node_port = get_node_port("smart-corridor-web", "smart-corridor")
     SCENESCAPE_KUBERNETES_URL = f"{SCENESCAPE_URL}:{web_node_port}"
   return SCENESCAPE_KUBERNETES_URL
 
-def get_pod_name(service_name, namespace="smart-intersection"):
+def get_pod_name(service_name, namespace="smart-corridor"):
   """Get the name of the first pod for a given service."""
   cmd = f"kubectl get pods -n {namespace} -l app={service_name} -o jsonpath='{{.items[0].metadata.name}}'"
   return subprocess.check_output(cmd, shell=True).decode().strip()
 
-def start_port_forwarding(service_name, local_port, remote_port, namespace="smart-intersection"):
+def start_port_forwarding(service_name, local_port, remote_port, namespace="smart-corridor"):
   """Start port forwarding for a service and return the process."""
   pod_name = get_pod_name(service_name, namespace)
   cmd = f"kubectl -n {namespace} port-forward {pod_name} {local_port}:{remote_port}"

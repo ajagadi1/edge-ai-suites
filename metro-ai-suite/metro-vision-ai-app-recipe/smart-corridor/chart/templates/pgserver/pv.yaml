@@ -11,7 +11,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Delete
   hostPath:
-    path: /mnt/data/smart-intersection-pgserver-db
+    path: /mnt/data/smart-corridor-pgserver-db
 
 ---
 apiVersion: v1
@@ -26,4 +26,4 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Delete
   hostPath:
-    path: /mnt/data/smart-intersection-pgserver-media
+    path: /mnt/data/smart-corridor-pgserver-media

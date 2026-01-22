@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 @pytest.mark.zephyr_id("NEX-T10676")
 def test_kubernetes_build_and_deployment():
   """Test that all Kubernetes services are running after deployment."""
-  namespace = "smart-intersection"
-  release_name = "smart-intersection"
+  namespace = "smart-corridor"
+  release_name = "smart-corridor"
   
   logger.info("Testing Kubernetes deployment status...")
   

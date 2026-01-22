@@ -44,16 +44,16 @@ By following this guide, you will learn how to:
 2. **Setup Application and Download Assets**:
    - Use the installation script to configure the application and download required models:
      ```bash
-     ./install.sh smart-intersection
+     ./install.sh smart-corridor
      ```
-     Note: For environments requiring a specific host IP address (such as when using Edge Manageability Toolkit or deploying across different network interfaces), you can explicitly specify the IP address (Replace `<HOST_IP>` with your target IP address.): `./install.sh smart-intersection <HOST_IP>`
+     Note: For environments requiring a specific host IP address (such as when using Edge Manageability Toolkit or deploying across different network interfaces), you can explicitly specify the IP address (Replace `<HOST_IP>` with your target IP address.): `./install.sh smart-corridor <HOST_IP>`
 
 ## Run the Application
 
 1. **Start the Application**:
    - Export admin password as environment variable:
      ```bash
-     export SUPASS=$(cat ./smart-intersection/src/secrets/supass)
+     export SUPASS=$(cat ./smart-corridor/src/secrets/supass)
      ```
 
    - Download container images with Application microservices and run with Docker Compose:
@@ -106,7 +106,7 @@ Open a browser and go to the following endpoints to access the application. Use 
 - **URL**: [https://localhost](https://localhost)
 - **Log in with credentials**:
     - **Username**: `admin`
-    - **Password**: Stored in `supass`. (Check `./smart-intersection/src/secrets/supass`)
+    - **Password**: Stored in `supass`. (Check `./smart-corridor/src/secrets/supass`)
 
 > **Notes**:
 > - After starting the application, wait approximately 1 minute for the MQTT broker to initialize. You can confirm it is ready when green arrows appear for MQTT in the application interface. Since the application uses HTTPS, your browser may display a self-signed certificate warning. For the best experience, use **Google Chrome**.
@@ -120,8 +120,8 @@ Open a browser and go to the following endpoints to access the application. Use 
 ### **InfluxDB UI** ###
 - **URL**: [http://localhost:8086](http://localhost:8086)
 - **Log in with credentials**:
-    - **Username**: `<your_influx_username>` (Check `./smart-intersection/src/secrets/influxdb2/influxdb2-admin-username`)
-    - **Password**: `<your_influx_password>` (Check `./smart-intersection/src/secrets/influxdb2/influxdb2-admin-password`).
+    - **Username**: `<your_influx_username>` (Check `./smart-corridor/src/secrets/influxdb2/influxdb2-admin-username`)
+    - **Password**: `<your_influx_password>` (Check `./smart-corridor/src/secrets/influxdb2/influxdb2-admin-password`).
 
 ### **NodeRED UI** ###
 - **URL**: [https://localhost/nodered/](https://localhost/nodered/)

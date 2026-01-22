@@ -58,11 +58,11 @@ cd edge-ai-suites/metro-ai-suite/metro-vision-ai-app-recipe/
 
 ## Step 3: Replace the Deployment YAML
 
-Inside the `smart-intersection/chart/templates/dlstreamer-pipeline-server/` directory, replace the deployment.yaml with the YAML file available [here](https://github.com/open-edge-platform/trusted-compute/blob/main/samples/ai/smart-intersection/deployment.yaml)
+Inside the `smart-corridor/chart/templates/dlstreamer-pipeline-server/` directory, replace the deployment.yaml with the YAML file available [here](https://github.com/open-edge-platform/trusted-compute/blob/main/samples/ai/smart-corridor/deployment.yaml)
 
 ```bash
 # Navigate to the templates directory
-cd smart-intersection/chart/templates/dlstreamer-pipeline-server/
+cd smart-corridor/chart/templates/dlstreamer-pipeline-server/
 
 # Replace the deployment file with your custom version
 # Copy the custom deployment.yaml to this location
@@ -83,7 +83,7 @@ Configure resource allocation to allocate CPU cores and memory. You can adjust t
 
 Follow the steps mentioned in the official documentation to run the Helm chart:
 
-[Steps to Deploy the Helm Chart](https://github.com/open-edge-platform/edge-ai-suites/blob/main/metro-ai-suite/metro-vision-ai-app-recipe/smart-intersection/docs/user-guide/how-to-deploy-helm.md)
+[Steps to Deploy the Helm Chart](https://github.com/open-edge-platform/edge-ai-suites/blob/main/metro-ai-suite/metro-vision-ai-app-recipe/smart-corridor/docs/user-guide/how-to-deploy-helm.md)
 
 ## Step 6: Verify DL Streamer Launch
 
@@ -105,7 +105,7 @@ If DL Streamer is running correctly, you should see a process entry for the corr
 To monitor the DL Streamer and see the total frames per second (FPS) count, postdecode timestamp, check the logs of the DL Streamer pod:
 
 ```bash
-kubectl logs <dl-streamer-deployment-name> -n smart-intersection
+kubectl logs <dl-streamer-deployment-name> -n smart-corridor
 ```
 
 This trusted compute implementation adds an additional layer of security by isolating video analytics pipelines within secure virtual machines, ensuring that sensitive traffic analysis operations are protected from potential threats.

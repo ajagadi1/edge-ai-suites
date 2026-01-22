@@ -41,20 +41,20 @@ cd edge-ai-suites/metro-ai-suite/metro-vision-ai-app-recipe/
 ```
 
 Optional: Pull the helm chart and replace the existing helm-chart folder with it
-    - Note: The helm chart should be downloaded when you are not using the helm chart provided in `edge-ai-suites/metro-ai-suite/metro-vision-ai-app-recipe/smart-intersection/chart`
+    - Note: The helm chart should be downloaded when you are not using the helm chart provided in `edge-ai-suites/metro-ai-suite/metro-vision-ai-app-recipe/smart-corridor/chart`
 
 ```bash
 # Navigate to Smart Intersection directory
-cd smart-intersection
+cd smart-corridor
 
 # Download helm chart with the following command
-helm pull oci://registry-1.docker.io/intel/smart-intersection --version 1.17.0
+helm pull oci://registry-1.docker.io/intel/smart-corridor --version 1.17.0
 
 # unzip the package using the following command
-tar -xvf smart-intersection-1.17.0.tgz
+tar -xvf smart-corridor-1.17.0.tgz
 
 # Replace the helm directory
-rm -rf chart && mv smart-intersection chart
+rm -rf chart && mv smart-corridor chart
 
 cd ..
 ```
@@ -66,7 +66,7 @@ cd ..
 These passwords need to be set before deployment. You can set them in the values.yaml file.
 ```bash
 # Edit the values.yaml file to set your external IP
-nano ./smart-intersection/chart/values.yaml
+nano ./smart-corridor/chart/values.yaml
 ```
 Find the following sections and update them with your desired passwords:
 
@@ -83,7 +83,7 @@ The Smart Intersection application needs to know your cluster's external IP addr
 
 ```bash
 # Edit the values.yaml file to set your external IP
-nano ./smart-intersection/chart/values.yaml
+nano ./smart-corridor/chart/values.yaml
 ```
 
 Find the `global.externalIP` section and update it with your actual external IP address:
@@ -139,13 +139,13 @@ Now you're ready to deploy the Smart Intersection application with nginx reverse
 
 ```bash
 # Install the chart (works on both single-node and multi-node clusters)
-helm upgrade --install smart-intersection ./smart-intersection/chart \
+helm upgrade --install smart-corridor ./smart-corridor/chart \
   --create-namespace \
   --set global.storageClassName="" \
-  -n smart-intersection
+  -n smart-corridor
 
 # Wait for all pods to be ready
-kubectl wait --for=condition=ready pod --all -n smart-intersection --timeout=300s
+kubectl wait --for=condition=ready pod --all -n smart-corridor --timeout=300s
 ```
 
 > **Note**: Using `global.storageClassName=""` makes the deployment use whatever default storage class exists on your cluster.
@@ -167,7 +167,7 @@ kubectl wait --for=condition=ready pod --all -n smart-intersection --timeout=300
 - **Username**: `admin`
 - **Password**: Get from secrets:
   ```bash
-  kubectl get secret smart-intersection-influxdb-secrets -n smart-intersection -o jsonpath='{.data.influxdb2-admin-password}' | base64 -d && echo
+  kubectl get secret smart-corridor-influxdb-secrets -n smart-corridor -o jsonpath='{.data.influxdb2-admin-password}' | base64 -d && echo
   ```
 
 ### NodeRED Editor
@@ -188,7 +188,7 @@ kubectl wait --for=condition=ready pod --all -n smart-intersection --timeout=300
 To uninstall the application, run the following command:
 
 ```bash
-helm uninstall smart-intersection -n smart-intersection
+helm uninstall smart-corridor -n smart-corridor
 ```
 
 ## Delete the Namespace
@@ -196,7 +196,7 @@ helm uninstall smart-intersection -n smart-intersection
 To delete the namespace and all resources within it, run the following command:
 
 ```bash
-kubectl delete namespace smart-intersection
+kubectl delete namespace smart-corridor
 ```
 
 ## Complete Cleanup
@@ -207,14 +207,14 @@ If you want to completely remove all infrastructure components installed during 
 # Remove local-path-provisioner (if installed)
 kubectl delete -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
 
-# Delete all PVCs in the smart-intersection namespace
-kubectl delete pvc --all -n smart-intersection
+# Delete all PVCs in the smart-corridor namespace
+kubectl delete pvc --all -n smart-corridor
 
 # Delete any remaining PVs (persistent volumes)
 kubectl delete pv --all
 
 # Force cleanup of stuck PVCs if needed (patch each PVC individually)
-kubectl get pvc -n smart-intersection --no-headers | awk '{print $1}' | xargs -I {} kubectl patch pvc {} -n smart-intersection --type merge -p '{"metadata":{"finalizers":null}}'
+kubectl get pvc -n smart-corridor --no-headers | awk '{print $1}' | xargs -I {} kubectl patch pvc {} -n smart-corridor --type merge -p '{"metadata":{"finalizers":null}}'
 
 # Remove additional storage classes (if created)
 kubectl delete storageclass hostpath local-storage standard

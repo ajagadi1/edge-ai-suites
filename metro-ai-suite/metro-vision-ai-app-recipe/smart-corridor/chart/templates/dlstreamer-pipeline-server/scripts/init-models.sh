@@ -12,7 +12,7 @@ else
   wget -O models.tar.gz {{ .Values.externalUrls.githubRepo }}/archive/refs/tags/{{ .Values.version.modelsRelease }}.tar.gz
   tar -xzf models.tar.gz
   mkdir -p /data/models
-  cp -r edge-ai-suites-{{ .Values.version.modelsRelease | replace "v" "" }}/metro-ai-suite/smart-intersection/src/dlstreamer-pipeline-server/models/* /data/models/
+  cp -r edge-ai-suites-{{ .Values.version.modelsRelease | replace "v" "" }}/metro-ai-suite/smart-corridor/src/dlstreamer-pipeline-server/models/* /data/models/
   echo "Models downloaded successfully"
   touch /data/models/.done
 fi
