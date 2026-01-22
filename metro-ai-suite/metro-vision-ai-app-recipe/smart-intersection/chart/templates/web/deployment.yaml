@@ -17,7 +17,7 @@ spec:
       annotations:
         checksum/secrets: {{ include (print $.Template.BasePath "/app-secrets.yaml") . | sha256sum }}
     spec:
-      {{- if .Values.externalUrls.githubRepo }}
+      {{- if .Values.gitSource }}
       initContainers:
       - name: download-example-db
         image: {{ .Values.images.alpine.repository }}:{{ .Values.images.alpine.tag }}
