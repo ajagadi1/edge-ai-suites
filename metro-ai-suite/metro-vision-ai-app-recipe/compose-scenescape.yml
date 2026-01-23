@@ -108,10 +108,10 @@ services:
       - influxdb2-admin-token
     volumes:
       - type: volume
-        source: influxdb2-data
+        source: influxdb2-data-smart-corridor
         target: /var/lib/influxdb2
       - type: volume
-        source: influxdb2-config
+        source: influxdb2-config-smart-corridor
         target: /etc/influxdb2
     restart: on-failure:5
     networks:
@@ -124,7 +124,7 @@ services:
       - ./${SAMPLE_APP}/src/grafana/data/dashboards/anthem-intersection.json:/tmp/anthem-intersection.json
       - ./${SAMPLE_APP}/src/grafana/dashboards.yml:/tmp/dashboards.yml
       - ./${SAMPLE_APP}/src/grafana/datasources.yml:/tmp/datasources.yml
-      - grafana-storage:/var/lib/grafana
+      - grafana-storage-smart-corridor:/var/lib/grafana
     environment:
       http_proxy: ${http_proxy}
       https_proxy: ${https_proxy}
@@ -201,8 +201,8 @@ services:
       - ./${SAMPLE_APP}/src/dlstreamer-pipeline-server/user_scripts:/home/pipeline-server/user_scripts
       - ./${SAMPLE_APP}/src/dlstreamer-pipeline-server/videos:/home/pipeline-server/videos
       - ./${SAMPLE_APP}/src/dlstreamer-pipeline-server/models/intersection:/home/pipeline-server/models/object_detection/intersection
-      - dlstreamer-pipeline-server-pipeline-root:/var/cache/pipeline_root:uid=1999,gid=1999
-      - dlstreamer-pipeline-server-tmp:/tmp
+      - dlstreamer-pipeline-server-pipeline-root-smart-corridor:/var/cache/pipeline_root:uid=1999,gid=1999
+      - dlstreamer-pipeline-server-tmp-smart-corridor:/tmp
       - "/dev:/dev"
     secrets:
       - source: root-cert
@@ -219,7 +219,7 @@ services:
       POSTGRES_USER: scenescape
       POSTGRES_DB: scenescape
     volumes:
-      - pgserver-db:/var/lib/postgresql/data
+      - pgserver-db-smart-corridor:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
@@ -265,8 +265,8 @@ services:
     security_opt:
       - apparmor:unconfined
     volumes:
-      - pgserver-media:/workspace/media
-      - pgserver-migrations:/workspace/migrations
+      - pgserver-media-smart-corridor:/workspace/media
+      - pgserver-migrations-smart-corridor:/workspace/migrations
       - ./${SAMPLE_APP}/src/webserver/user_access_config.json:/home/scenescape/SceneScape/user_access_config.json
       - ./${SAMPLE_APP}/src/webserver/smart-intersection-ri.tar.bz2:/home/scenescape/SceneScape/smart-intersection-ri.tar.bz2
     secrets:
@@ -315,7 +315,7 @@ services:
       --broker broker.scenescape.intel.com
       --ntp ntpserv
     volumes:
-      - pgserver-media:/home/scenescape/SceneScape/media
+      - pgserver-media-smart-corridor:/home/scenescape/SceneScape/media
     secrets:
       - source: root-cert
         target: certs/scenescape-ca.pem
@@ -383,20 +383,20 @@ configs:
     file: ./${SAMPLE_APP}/src/controller/tracker-config.json
 
 volumes:
-  dlstreamer-pipeline-server-pipeline-root:
+  dlstreamer-pipeline-server-pipeline-root-smart-corridor:
     driver: local
     driver_opts:
       type: tmpfs
       device: tmpfs
-  dlstreamer-pipeline-server-tmp:
+  dlstreamer-pipeline-server-tmp-smart-corridor:
     driver: local
     driver_opts:
       type: tmpfs
       device: tmpfs
-  influxdb2-data:
-  influxdb2-config:
-  grafana-storage:
-  pgserver-db:
-  pgserver-migrations:
-  pgserver-media:
-  sample-data:
+  influxdb2-data-smart-corridor:
+  influxdb2-config-smart-corridor:
+  grafana-storage-smart-corridor:
+  pgserver-db-smart-corridor:
+  pgserver-migrations-smart-corridor:
+  pgserver-media-smart-corridor:
+  sample-data-smart-corridor:
