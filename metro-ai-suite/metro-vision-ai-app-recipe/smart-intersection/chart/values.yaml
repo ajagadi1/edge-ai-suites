@@ -6,13 +6,6 @@ no_proxy:
 supass:
 pgpass:
 
-# Git source configuration for downloading models
-gitSource:
-  # Use 'tag' for releases or 'branch' for branches
-  type: branch  # Options: 'tag' or 'branch'
-  # Name of the tag or branch
-  ref: main  # e.g., 'v1.0.0' for tag or 'main' for branch
-
 kubernetesAPIEndpoint: https://kubernetes.default.svc.cluster.local
 
 # Global configuration
@@ -23,8 +16,14 @@ global:
 # Global image pull policy for all containers
 imagePullPolicy: IfNotPresent
 
+# Global version configuration for external dependencies and assets
+version:
+  release: "v1.2.0-20250819"
+  modelsRelease: "v1.2.0-20250624"
+
 # External URLs and repositories
 externalUrls:
+  githubRepo: "https://github.com/open-edge-platform/edge-ai-suites"
   videosRepo: "https://github.com/intel/metro-ai-suite/raw/refs/heads/videos/videos"
 
 # Container images for utilities and init containers
