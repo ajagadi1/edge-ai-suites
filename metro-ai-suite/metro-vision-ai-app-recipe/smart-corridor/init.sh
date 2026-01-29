@@ -32,6 +32,26 @@ if [ ! -d "${SOURCE}/dlstreamer-pipeline-server/videos" ] || [ -z "$(find "${SOU
   done
 fi
 
+# Download vehicle-reid-0001 model if not present
+if [ ! -d "${SOURCE}/dlstreamer-pipeline-server/models/public/vehicle-reid-0001" ]; then
+  echo "Downloading vehicle-reid-0001 model..."
+  MODEL_DIR="${SOURCE}/dlstreamer-pipeline-server/models"
+  
+  pip install -q openvino-dev[onnx,tensorflow2]
+  
+  omz_downloader --name vehicle-reid-0001 -o "${MODEL_DIR}"
+  omz_converter --name vehicle-reid-0001 -o "${MODEL_DIR}" -d "${MODEL_DIR}"
+  
+  # Create vehicle_reid directory and move model files
+  mkdir -p "${MODEL_DIR}/vehicle_reid"
+  if [ -d "${MODEL_DIR}/public/vehicle-reid-0001" ]; then
+    cp -r "${MODEL_DIR}/public/vehicle-reid-0001"/* "${MODEL_DIR}/vehicle_reid/"
+    echo "Vehicle ReID model downloaded successfully"
+  else
+    echo "Warning: Vehicle ReID model download may have failed"
+  fi
+fi
+
 # Copy files to chart
 mkdir -p ${CHART}/files
 mkdir -p ${CHART}/files/dlstreamer-pipeline-server/user_scripts/gvapython/sscape

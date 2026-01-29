@@ -201,6 +201,7 @@ services:
       - ./${SAMPLE_APP}/src/dlstreamer-pipeline-server/user_scripts:/home/pipeline-server/user_scripts
       - ./${SAMPLE_APP}/src/dlstreamer-pipeline-server/videos:/home/pipeline-server/videos
       - ./${SAMPLE_APP}/src/dlstreamer-pipeline-server/models/intersection:/home/pipeline-server/models/object_detection/intersection
+      - ./${SAMPLE_APP}/src/dlstreamer-pipeline-server/models/vehicle_reid:/home/pipeline-server/models/vehicle_reid
       - dlstreamer-pipeline-server-pipeline-root-smart-corridor:/var/cache/pipeline_root:uid=1999,gid=1999
       - dlstreamer-pipeline-server-tmp-smart-corridor:/tmp
       - "/dev:/dev"
