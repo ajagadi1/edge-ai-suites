@@ -12,10 +12,10 @@ services:
       scenescape:
         aliases:
           - ntpserv
-    restart: on-failure:5
+    restart: unless-stopped
 
   broker:
-    image: docker.io/library/eclipse-mosquitto:2.0.21
+    image: docker.io/library/eclipse-mosquitto:2.0.22
     environment:
       http_proxy: ${http_proxy}
       https_proxy: ${https_proxy}
@@ -44,10 +44,10 @@ services:
         aliases:
           - broker.scenescape.intel.com
     user: "${UID}:${GID}"
-    restart: on-failure:5
+    restart: unless-stopped
 
   node-red:
-    image: docker.io/nodered/node-red:4.0
+    image: docker.io/nodered/node-red:4.1
     user: root
     environment:
       TZ: America/Los_Angeles
@@ -84,7 +84,7 @@ services:
         bash /data/install_package.sh && \
         /usr/src/node-red/entrypoint.sh",
       ]
-    restart: on-failure:5
+    restart: unless-stopped
 
   influxdb2:
     image: docker.io/library/influxdb:2.7.11
@@ -115,7 +115,7 @@ services:
       - type: volume
         source: influxdb2-config-smart-corridor
         target: /etc/influxdb2
-    restart: on-failure:5
+    restart: unless-stopped
     networks:
       - scenescape
 
@@ -138,7 +138,7 @@ services:
       GF_SERVER_SERVE_FROM_SUB_PATH: true
       GF_PANELS_DISABLE_SANITIZE_HTML: true
       GF_SECURITY_ALLOW_EMBEDDING: true
-    restart: on-failure:5
+    restart: unless-stopped
     networks:
       - scenescape
     secrets:
@@ -173,9 +173,14 @@ services:
       - "c 209:* rmw"
       - "a 189:* rwm"
     group_add:
+      - "44"
       - "109"
       - "110"
+      - "990"
       - "992"
+      - "993"
+      - "994"
+      - "996"
     depends_on:
       - broker
       - ntpserver
@@ -210,7 +215,7 @@ services:
     secrets:
       - source: root-cert
         target: certs/scenescape-ca.pem
-    restart: on-failure:5
+    restart: unless-stopped
 
   pgserver:
     image: postgres:17.6
@@ -225,9 +230,16 @@ services:
       - pgserver-db-smart-corridor:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scenescape -d scenescape"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
 
   web:
-    image: intel/scenescape-manager:v2026.0.0
+    image: intel/scenescape-manager:2026.1.0
     init: true
     networks:
       scenescape:
@@ -235,7 +247,7 @@ services:
           - web.scenescape.intel.com
     depends_on:
       pgserver:
-        condition: service_started
+        condition: service_healthy
       broker:
         condition: service_started
     environment:
@@ -247,11 +259,11 @@ services:
       - HTTPS_PROXY=${https_proxy}
       - SUPASS=${SUPASS}
       - EXAMPLEDB=/home/scenescape/SceneScape/${SAMPLE_APP}-ri.tar.bz2
+      - DBHOST=pgserver
+      - DBPORT=5432
     command: >
       webserver
-      --dbhost pgserver
       --dbtype postgres
-      --dbport 5432
       --broker broker.scenescape.intel.com
       --brokerauth /run/secrets/browser.auth
       --brokerrootcert /run/secrets/certs/scenescape-ca.pem
@@ -282,7 +294,7 @@ services:
       - django
       - browser.auth
       - controller.auth
-    restart: on-failure:5
+    restart: unless-stopped
 
   vdms:
     image: intellabs/vdms:v2.12.0
@@ -302,10 +314,10 @@ services:
         target: certs/scenescape-vdms-s.crt
       - source: vdms-server-key
         target: certs/scenescape-vdms-s.key
-    restart: always
+    restart: unless-stopped
 
   scene:
-    image: intel/scenescape-controller:v2026.0.0
+    image: intel/scenescape-controller:2026.1.0
     init: true
     environment:
       - http_proxy=${http_proxy}
@@ -342,7 +354,7 @@ services:
     volumes:
       - pgserver-media-smart-corridor:/home/scenescape/SceneScape/media
       - ./${SAMPLE_APP}/src/controller/vdms_adapter_patched.py:/usr/local/lib/python3.11/site-packages/controller/vdms_adapter.py:ro
-      - ./${SAMPLE_APP}/src/controller/moving_object_patched.py:/usr/local/lib/python3.11/site-packages/controller/moving_object.py:ro
+      #- ./${SAMPLE_APP}/src/controller/moving_object_patched.py:/usr/local/lib/python3.11/site-packages/controller/moving_object.py:ro
     secrets:
       - source: root-cert
         target: certs/scenescape-ca.pem
@@ -352,14 +364,14 @@ services:
         target: certs/scenescape-vdms-c.key
       - django
       - controller.auth
-    restart: on-failure:5
+    restart: unless-stopped
 
   nginx:
-    image: nginx:1.27-alpine
+    image: nginx:1.30.2-alpine
     container_name: nginx-reverse-proxy
     ports:
-      - "8080:80"
-      - "8443:443"
+      - "80:80"
+      - "443:443"
     volumes:
       - "./${SAMPLE_APP}/src/nginx/nginx.conf:/etc/nginx/nginx.conf:ro"
       - "./${SAMPLE_APP}/src/nginx/ssl:/etc/nginx/ssl:ro"
@@ -376,7 +388,7 @@ services:
       - https_proxy=${https_proxy}
       - no_proxy=${no_proxy},${HOST_IP}
       - NO_PROXY=${no_proxy},${HOST_IP}
-    restart: on-failure:5
+    restart: unless-stopped
 
 networks:
   scenescape:
